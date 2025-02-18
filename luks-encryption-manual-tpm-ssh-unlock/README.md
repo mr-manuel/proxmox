@@ -1,12 +1,12 @@
-# HOW TO - Encrypt complete Proxmox node with LUKS
+# HOW TO - Encrypt complete Proxmox VE node with LUKS
 
 I was searching myself a way on how to get a full encrypted node, but found no step by step how to, so here it is.
 
-**NOTE:** I'm not responsible, if you break something. Make always sure to have a backup before you begin.
+**⚠️ NOTE:** I'm not responsible, if you break something. Make always sure to have a backup before you begin.
 
-This HOW TO works for an existing or fresh Proxmox VE installation, but currently needs a ZFS RAID1 (mirror) and GRUB as boot loader. The HOW TO for other disk configurations and filesystems will follow. You are welcome to help to add those steps :-)
+This HOW TO works for an existing or fresh Proxmox VE installation, but currently needs a ZFS RAID1 (mirror), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3) and GRUB as boot loader. The HOW TO for other disk configurations and filesystems will follow. You are welcome to help to add those steps :-)
 
-Upvote the feature request [here](https://bugzilla.proxmox.com/show_bug.cgi?id=6160) to get LUKS configuration integrated in the Proxmox installer. For reference here is also the [Proxmox Forum](https://forum.proxmox.com/threads/feature-request-add-luks-to-installer.162036/) entry, but the upvotes are needed in the Proxmox Bugzilla instance.
+Upvote the feature request [here](https://bugzilla.proxmox.com/show_bug.cgi?id=6160) to get LUKS configuration integrated in the Proxmox VE installer. For reference here is also the [Proxmox Forum](https://forum.proxmox.com/threads/feature-request-add-luks-to-installer.162036/) entry, but the upvotes are needed in the Proxmox Bugzilla instance.
 
 If you already have LUKS configured, you can use this guide to make the system bootable again or add unlock options.
 
@@ -14,17 +14,17 @@ What this HOW TO cover:
 
 1. [Fresh installation](#fresh-installation)
 
-   - [ZFS RAID1 (mirror)](#zfs-raid1-mirror)
+   - [ZFS RAID1 (mirror), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)](#zfs-raid1-mirror-zfs-raidz-1-zfs-raidz-2-zfs-raidz-3)
 2. [Things to check before starting](#things-to-check-before-starting)
 
-   - [ZFS RAID1 (mirror)](#zfs-raid1-mirror-1)
+   - [ZFS RAID1 (mirror), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)](#zfs-raid1-mirror-zfs-raidz-1-zfs-raidz-2-zfs-raidz-3-1)
 3. [Backup data](#backup-data)
 4. [Install requirements](#install-requirements)
 5. [Enable LUKS](#enable-luks)
 
-   - [ZFS RAID1 (mirror)](#zfs-raid1-mirror-2)
-       - Remove one ZFS mirror disk
-       - Delete all data on the removed partition and create a LUKS (crypted) partition
+   - [ZFS RAID1 (mirror), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)](#zfs-raid1-mirror-zfs-raidz-1-zfs-raidz-2-zfs-raidz-3-2)
+       - Take offline one ZFS disk
+       - Delete all data on the offline partition and create a LUKS (crypted) partition
        - Mount the crypted volume
        - Resilver the empty crypted LUKS disk with the other disk that has still the data on it
        - Repeat the same step for the other disk
@@ -34,12 +34,14 @@ What this HOW TO cover:
 
    - [OPTIONAL: Add possibility to unlock via SSH (dropbear-initramfs)](#optional-add-possibility-to-unlock-via-ssh-dropbear-initramfs)
    - [OPTIONAL: Add automated unlock via TPM](#optional-add-automated-unlock-via-tpm)
+   - [OPTIONAL: Add automated unlock via USB key (not yet completed)](#optional-optional-add-automated-unlock-via-usb-key)
+   - [OPTIONAL: Add automated unlock via remote server (MandOS)](#optional-add-automated-unlock-via-usb-key)
 
 # Fresh installation
 
-## ZFS RAID1 (mirror)
+## ZFS RAID1 (mirror), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)
 
-Start the Proxmox VE installer. In the `Target harddisk` step choose `Advanced options` and select `ZFS (RAID1)`, then proceed with the installation.
+Start the Proxmox VE installer. In the `Target harddisk` step choose `Advanced options` and select `ZFS (RAID1)`, `ZFS (RAIDZ-1)`, `ZFS (RAIDZ-2)` or `ZFS (RAIDZ-3)`. Then proceed with the installation.
 
 ![Target harddisk](./img/target-harddisk.png)
 
@@ -47,9 +49,19 @@ Start the Proxmox VE installer. In the `Target harddisk` step choose `Advanced o
 
 # Things to check before starting
 
-The following steps depend on your selected filesystem and disk configuration. Currently only the HOW TO for `ZFS RAID1 (mirror)` is completed.
+The following steps depend on your selected filesystem and disk configuration. Currently only the HOW TO for `ZFS RAID1 (mirror), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)` is completed.
 
 Meanwhile the single disk instructions are work in progress, you can check this tutorial: https://forum.proxmox.com/threads/adding-full-disk-encryption-to-proxmox.137051/
+
+https://gist.github.com/yvesh/ae77a68414484c8c79da03c4a4f6fd55
+https://linsomniac.gitlab.io/post/2020-04-09-ubuntu-2004-encrypted-zfs/
+https://forum.level1techs.com/t/encrypted-proxmox-homeserver-questions-on-how-to-do-it/138997
+
+https://forum.proxmox.com/threads/create-custom-pve-iso-from-original-pve-iso.123606/#post-538612
+https://forum.proxmox.com/threads/native-full-disk-encryption-with-zfs.140170/
+https://privsec.dev/posts/linux/using-native-zfs-encryption-with-proxmox/
+https://xiu.io/posts/18-proxmox-zfs-fde/
+
 
 ## Single disk (🚨 HOW TO NOT YET COMPLETED, DO NOT TRY)
 
@@ -134,7 +146,7 @@ Meanwhile the single disk instructions are work in progress, you can check this 
     └─nvme0n1p3 259:3    0  1.8T  0 part /
     ```
 
-## ZFS RAID1 (mirror)
+## ZFS RAID1 (mirror), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)
 
 1. Reboot your node and make sure GRUB is used. You will see something like this on boot:
 
@@ -153,6 +165,7 @@ Meanwhile the single disk instructions are work in progress, you can check this 
     ├─sdb1      8:17   0  1007K  0 part
     ├─sdb2      8:18   0     1G  0 part
     └─sdb3      8:19   0   1.8T  0 part
+    ... (or more disks)
     ```
 
     or
@@ -168,6 +181,7 @@ Meanwhile the single disk instructions are work in progress, you can check this 
     ├─nvme1n1p1 259:5    0  1007K  0 part
     ├─nvme1n1p2 259:6    0     1G  0 part
     └─nvme1n1p3 259:7    0   1.8T  0 part
+    ... (or more disks)
     ```
 
 # Backup Data
@@ -179,15 +193,6 @@ dd if=/dev/sda3 bs=4M of=/path/to/backup/sda3.img
 ```
 
 # Install requirements
-
-During the whole process you will see multiple times this errors:
-
-```
-cryptsetup: ERROR: Couldn't resolve device rpool/ROOT/pve-1
-cryptsetup: WARNING: Couldn't determine root device
-```
-
-I did not manage to understand what caused them exactly, but everything still worked fine.
 
 Install the required software:
 
@@ -205,13 +210,13 @@ cryptsetup benchmark
 
 # Enable LUKS
 
-The following steps depend on your selected filesystem and disk configuration. Currently only the HOW TO for `ZFS RAID1 (mirror)` is completed.
+The following steps depend on your selected filesystem and disk configuration. Currently only the HOW TO for `ZFS RAID1 (mirror), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)` is completed.
 
 ## Single disk (🚨 HOW TO NOT YET COMPLETED, DO NOT TRY)
 
 Not yet completed.
 
-## ZFS RAID1 (mirror)
+## ZFS RAID1 (mirror), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)
 
 Check the name of your disks and partitions with
 
@@ -227,22 +232,96 @@ Check the current ZFS pool status this command and check that everything is `ONL
 zpool status
 ```
 
-Take the `sdb3` offline and remove it from the ZFS mirror:
+**ZFS RAID1 (mirror)**
+
+```
+root@pve01:~# zpool status
+  pool: rpool
+ state: ONLINE
+config:
+
+        NAME                                                  STATE     READ WRITE CKSUM
+        rpool                                                 ONLINE       0     0     0
+          mirror-0                                            ONLINE       0     0     0
+            ata-KINGSTON_SEDC600M960G_50026B7686E0B385-part3  ONLINE       0     0     0
+            ata-KINGSTON_SEDC600M960G_50026B7686E0B30F-part3  ONLINE       0     0     0
+
+errors: No known data errors
+```
+
+```
+root@pve01:~# zpool status
+  pool: rpool
+ state: ONLINE
+config:
+
+        NAME                                                 STATE     READ WRITE CKSUM
+        rpool                                                ONLINE       0     0     0
+          mirror-0                                           ONLINE       0     0     0
+            nvme-eui.e8238fa6bf530001001b448b4d638eab-part3  ONLINE       0     0     0
+            nvme-eui.e8238fa6bf530001001b448b4d638ea9-part3  ONLINE       0     0     0
+
+errors: No known data errors
+```
+
+**ZFS RAIDZ-x**
+
+```
+root@pve01:~# zpool status
+  pool: rpool
+ state: ONLINE
+config:
+
+        NAME                                                  STATE     READ WRITE CKSUM
+        rpool                                                 ONLINE       0     0     0
+          raidz1-0                                            ONLINE       0     0     0
+            ata-KINGSTON_SEDC600M960G_50026B7686E0B385-part3  ONLINE       0     0     0
+            ata-KINGSTON_SEDC600M960G_50026B7686E0B30F-part3  ONLINE       0     0     0
+            ata-KINGSTON_SEDC600M960G_50026B7686E0B332-part3  ONLINE       0     0     0
+            ... (or more disks)
+
+errors: No known data errors
+```
+
+```
+root@pve01:~# zpool status
+  pool: rpool
+ state: ONLINE
+config:
+
+        NAME                                       STATE     READ WRITE CKSUM
+        rpool                                      ONLINE       0     0     0
+          raidz1-0                                 ONLINE       0     0     0
+            nvme-CT2000P3PSSD8_2451E99B985B-part3  ONLINE       0     0     0
+            nvme-CT2000P3PSSD8_2451E99B98F4-part3  ONLINE       0     0     0
+            nvme-CT2000P3PSSD8_2451E99B9906-part3  ONLINE       0     0     0
+            ... (or more disks)
+
+errors: No known data errors
+```
+
+
+Should your disks have an UUID in `zpool status` instead of the disk and partition name you can find the association with
+
+```bash
+ls -l /dev/disk/by-id/ | grep eui
+```
+
+Take the `sdb3` offline in the ZFS pool:
 
 ```bash
 zpool offline rpool sdb3
-zpool detach rpool sdb3
 ```
 
-Check the pool status again to ensure the disk was successfully removed:
+Check the pool status again to ensure the disk was successfully taken offline:
 
 ```bash
 zpool status
 ```
 
-Now that `sdb3` is offline and removed from the pool, you can encrypt it using LUKS. Enter this command to encrypt with 512-bit.
+Now that `sdb3` is offline from the pool, you can encrypt it using LUKS. Enter this command to encrypt with 512-bit.
 
-NOTE: The key size you see (512-bit) is actually two 256-bit. AES-XTS requires two keys: one for encryption and one as a tweak key.
+**⚠️ NOTE:** The key size you see (512-bit) is actually two 256-bit. AES-XTS requires two keys: one for encryption and one as a tweak key.
 
 ```bash
 cryptsetup luksFormat --cipher aes-xts-plain64 --key-size 512 --hash sha512 --use-random /dev/sdb3
@@ -256,10 +335,10 @@ Open the LUKS-encrypted partition:
 cryptsetup luksOpen /dev/sdb3 luks-sdb3
 ```
 
-Now that `sdb3` is encrypted, you can add it back to the ZFS pool as a mirror:
+Now that `sdb3` is encrypted, you can replace the old unencrypted offline disk with the new encrypted disk in the ZFS pool:
 
 ```bash
-zpool attach rpool sda3 /dev/mapper/luks-sdb3
+zpool replace rpool sdb3 /dev/mapper/luks-sdb3
 ```
 
 The system will begin to resilver and copy the data from `sda3` onto the new `luks-sdb3` disk.
@@ -274,22 +353,21 @@ zpool status
 
 Once the resilvering is complete, proceed with encrypting `sda3` in the same way:
 
-Take the `sda3` offline and remove it from the ZFS mirror:
+Take the `sda3` offline in the ZFS pool:
 
 ```bash
 zpool offline rpool sda3
-zpool detach rpool sda3
 ```
 
-Check the pool status again to ensure the disk was successfully removed:
+Check the pool status again to ensure the disk was successfully taken offline:
 
 ```bash
 zpool status
 ```
 
-Now that `sda3` is offline and removed from the pool, you can encrypt it using LUKS. Enter this command to encrypt with 512-bit.
+Now that `sda3` is offline in the pool, you can encrypt it using LUKS. Enter this command to encrypt with 512-bit.
 
-NOTE: The key size you see (512-bit) is actually two 256-bit. AES-XTS requires two keys: one for encryption and one as a tweak key.
+**⚠️ NOTE:** The key size you see (512-bit) is actually two 256-bit. AES-XTS requires two keys: one for encryption and one as a tweak key.
 
 ```bash
 cryptsetup luksFormat --cipher aes-xts-plain64 --key-size 512 --hash sha512 --use-random /dev/sda3
@@ -303,10 +381,10 @@ Open the LUKS-encrypted partition:
 cryptsetup luksOpen /dev/sda3 luks-sda3
 ```
 
-Now that `sda3` is encrypted, you can add it back to the ZFS pool as a mirror:
+Now that `sda3` is encrypted, you can replace the old unencrypted offline disk with the new encrypted disk in the ZFS pool:
 
 ```bash
-zpool attach rpool sdb3 /dev/mapper/luks-sda3
+zpool replace rpool sda3 /dev/mapper/luks-sda3
 ```
 
 The system will begin to resilver and copy the data from `sdb3` onto the new `luks-sda3` disk.
@@ -319,35 +397,47 @@ You can monitor the progress by checking:
 zpool status
 ```
 
-**NOTE:** Your system now will not boot anymore, you need to execute also the next step!
+**⚠️ NOTE:** Your system now will not boot anymore, you need to execute also the next step!
 
 # Fix the boot procedure
 
-## ZFS
+## For EXT4, XFS, BTRFS filesystems as root partition (🚨 HOW TO NOT YET COMPLETED, DO NOT TRY)
+
+Not yet completed.
+
+## For ZFS filesystems as root partition
 
 This is the most basic step and the password will be requested at every boot.
 
-Get the UUID's of the encrypted disks:
+**⚠️ NOTE:** If you don't do this, your system will not boot again without a live USB/CD
+
+Get the `UUID`'s of the encrypted disks:
 
 ```bash
-blkid | grep "/dev/[a-z]*3"
+blkid | grep "/dev/[a-z0-9]*3" | grep -v "/dev/zd"
 ```
 
-Modify the crypttab file `/etc/crypttab` by adding these lines. Replace disk UUID with the values fetched before.
+Modify the crypttab file `/etc/crypttab` by adding these lines. Replace disk `UUID` with the values fetched before.
+
+**⚠️ NOTE:** Pay attention to copy the `UUID` and NOT the `UUID_SUB` or `PARTUUID`!
 
 ```
 luks-sda3 UUID="<disk UUID>" none luks,discard,initramfs
 luks-sdb3 UUID="<disk UUID>" none luks,discard,initramfs
 ```
 
-Modify the kernel cmdline file `/etc/kernel/cmdline` to this:
+Check, if your kernel cmdline file `/etc/kernel/cmdline` looks like this:
 
 ```
-# For ZFS
-echo 'cryptdevice=/dev/sda3:luks-sda3 cryptdevice=/dev/sdb3:luks-sdb3 root=ZFS=rpool/ROOT/pve-1 resume=/dev/mapper/luks-sda3 resume=/dev/mapper/luks-sdb3 boot=zfs' > /etc/kernel/cmdline
+root=ZFS=rpool/ROOT/pve-1 boot=zfs
+```
 
-# For all other
-echo 'cryptdevice=/dev/sda3:luks-sda3 cryptdevice=/dev/sdb3:luks-sdb3 root=/dev/mapper/luks-sda3' > /etc/kernel/cmdline
+Then overwrite the kernel cmdline file `/etc/kernel/cmdline` with this command. Make sure you add all disks that need to be encrypted:
+
+```
+# For ZFS RAID1 (mirror), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)
+# You need to add all disks of the ZFS pool
+echo 'cryptdevice=/dev/sda3:luks-sda3 cryptdevice=/dev/sdb3:luks-sdb3 root=ZFS=rpool/ROOT/pve-1 resume=/dev/mapper/luks-sda3 resume=/dev/mapper/luks-sdb3 boot=zfs' > /etc/kernel/cmdline
 ```
 
 Add module to initramfs file `/etc/initramfs-tools/modules`:
@@ -356,30 +446,39 @@ Add module to initramfs file `/etc/initramfs-tools/modules`:
 echo 'dmcrypt' >> /etc/initramfs-tools/modules
 ```
 
+In the next step you will see multiple times the following errors. When using ZFS the root partition is handled differently and therefore it's safe to ignore this messages:
+
+```
+cryptsetup: ERROR: Couldn't resolve device rpool/ROOT/pve-1
+cryptsetup: WARNING: Couldn't determine root device
+```
+
 Update initramfs with this command:
 
 ```bash
 update-initramfs -u -k all
 ```
 
-Update the Proxmox bootloader with this command:
+Update the Proxmox VE bootloader with this command:
 
 ```bash
 proxmox-boot-tool refresh
 ```
+
+If this commands finished without errors you can now reboot and enter the passwort at boot.
 
 ## OPTIONAL: Add possibility to unlock via SSH (dropbear-initramfs)
 
 Install the requirements:
 
 ```bash
-apt install dropbear-initramfs
+apt install -y dropbear-initramfs
 ```
 
 Add this line to the dropbear config `/etc/dropbear/initramfs/dropbear.conf`:
 
 ```
-DROPBEAR_OPTIONS="-s -c cryptroot-unlock"
+echo 'DROPBEAR_OPTIONS="-s -c cryptroot-unlock"' >> /etc/dropbear/initramfs/dropbear.conf
 ```
 
 Add your `authorized_keys` to `/etc/dropbear/initramfs/authorized_keys` and fix the permissions:
@@ -404,6 +503,7 @@ Check for the interface name with `ip link` and replace the values with your's.
 `255.255.255.0`: Subnet mask
 `1.1.1.1`: DNS server
 `enp4s0`: Interface name
+
 ```
 GRUB_CMDLINE_LINUX_DEFAULT="quiet ip=192.168.1.101::192.168.1.254:255.255.255.0:1.1.1.1:enp4s0:none"
 ```
@@ -414,7 +514,7 @@ Update initramfs with this command:
 update-initramfs -u -k all
 ```
 
-Update the Proxmox bootloader with this command:
+Update the Proxmox VE bootloader with this command:
 
 ```bash
 proxmox-boot-tool refresh
@@ -469,13 +569,20 @@ clevis luks unlock -d /dev/sda3
 clevis luks unlock -d /dev/sdb3
 ```
 
+If it worked you will get
+
+```
+Cannot use device /dev/sda3 which is in use (already mapped or mounted).
+Cannot use device /dev/sdb3 which is in use (already mapped or mounted).
+```
+
 Update initramfs with this command:
 
 ```bash
 update-initramfs -u -k all
 ```
 
-Update the Proxmox bootloader with this command:
+Update the Proxmox VE bootloader with this command:
 
 ```bash
 proxmox-boot-tool refresh
@@ -486,6 +593,10 @@ proxmox-boot-tool refresh
 - https://silvenga.com/posts/tpm-luks-unlock/
 - https://community.frame.work/t/guide-setup-tpm2-autodecrypt/39005
 
+
+## OPTIONAL: Add automated unlock via USB key
+
+- https://blog.fidelramos.net/software/unlock-luks-usb-drive
 
 ## OPTIONAL: Add automated unlock via remote server (MandOS)
 
