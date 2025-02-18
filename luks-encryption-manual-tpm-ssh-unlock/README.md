@@ -37,6 +37,13 @@ What this HOW TO cover:
    - [OPTIONAL: Add automated unlock via USB key (not yet completed)](#optional-optional-add-automated-unlock-via-usb-key)
    - [OPTIONAL: Add automated unlock via remote server (MandOS)](#optional-add-automated-unlock-via-usb-key)
 
+## Support maintaining this guide
+
+Writing and maintaining this guide took and continues to take a lot of time and effort to test and update.
+If you find it helpful and would like to support my work, any donation would be greatly appreciated. Even a small contribution would mean a lot to me :-)
+
+[<img src="https://github.md0.eu/uploads/donate-button.svg" height="38">](https://www.paypal.com/donate/?hosted_button_id=3NEVZBDM5KABW)
+
 # Fresh installation
 
 ## ZFS RAID1 (mirror), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)
