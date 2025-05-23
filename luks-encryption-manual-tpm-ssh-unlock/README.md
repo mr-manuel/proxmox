@@ -4,7 +4,7 @@ I was searching myself a way on how to get a full encrypted node, but found no s
 
 **⚠️ NOTE:** I'm not responsible, if you break something. Make always sure to have a backup before you begin.
 
-This how to works for an existing or fresh Proxmox VE installation, but currently needs a `ZFS (RAID1)`, `ZFS (RAID10)`, `ZFS (RAIDZ-1)`, `ZFS (RAIDZ-2)`, `ZFS (RAIDZ-3)` filesystem. The how to for other filesystems and disk configurations will follow. You are welcome to help to add those steps :-)
+This how to works for an existing or fresh Proxmox VE installation, but currently needs a `ZFS (RAID0)`, `ZFS (RAID1)`, `ZFS (RAID10)`, `ZFS (RAIDZ-1)`, `ZFS (RAIDZ-2)`, `ZFS (RAIDZ-3)` filesystem. The how to for other filesystems and disk configurations will follow. You are welcome to help to add those steps :-)
 
 Upvote the feature request [here](https://bugzilla.proxmox.com/show_bug.cgi?id=6160) to get LUKS configuration integrated in the Proxmox VE installer. For reference here is also the [Proxmox Forum](https://forum.proxmox.com/threads/feature-request-add-luks-to-installer.162036/) entry, but the upvotes are needed in the Proxmox Bugzilla instance.
 
@@ -15,31 +15,36 @@ What this how to covers:
 1. [Fresh installation](#fresh-installation)
 
    - [ZFS (RAID1), ZFS (RAID10), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)](#zfs-raid1-zfs-raid10-zfs-raidz-1-zfs-raidz-2-zfs-raidz-3)
+
 2. [Things to check before starting](#things-to-check-before-starting)
 
    - [Boot loader](#boot-loader)
-       - [GRUB](#grub)
-       - [systemd-boot](#systemd-boot)
+     - [GRUB](#grub)
+     - [systemd-boot](#systemd-boot)
    - [Filesystem and disk configuration](#filesystem-and-disk-configuration)
-       - [ZFS (RAID1), ZFS (RAID10), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)](#zfs-raid1-zfs-raid10-zfs-raidz-1-zfs-raidz-2-zfs-raidz-3-1)
+     - [ZFS (RAID1), ZFS (RAID10), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)](#zfs-raid1-zfs-raid10-zfs-raidz-1-zfs-raidz-2-zfs-raidz-3-1)
+
 3. [Backup data](#backup-data)
 4. [Install requirements](#install-requirements)
 5. [Enable LUKS for root partition](#enable-luks-for-root-partition)
 
+   - [ZFS (RAID0/Single Disk)](#zfs-raid0single-disk)
    - [ZFS (RAID1), ZFS (RAID10), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)](#zfs-raid1-zfs-raid10-zfs-raidz-1-zfs-raidz-2-zfs-raidz-3-2)
-       - Take offline one ZFS partition
-       - Delete all data on the offline partition and create a LUKS (crypted) partition
-       - Mount the crypted volume
-       - Replace the old ZFS partition in the ZFS pool with the new empty crypted ZFS partition and wait for resilvering to complete
-       - Repeat the same step for the other ZFS partition
+     - Take offline one ZFS partition
+     - Delete all data on the offline partition and create a LUKS (crypted) partition
+     - Mount the crypted volume
+     - Replace the old ZFS partition in the ZFS pool with the new empty crypted ZFS partition and wait for resilvering to complete
+     - Repeat the same step for the other ZFS partition
+
 6. [Fix the boot procedure](#fix-the-boot-procedure)
 
-    Reconfigure the boot loader to be able to boot and asking for the LUKS password
+   Reconfigure the boot loader to be able to boot and asking for the LUKS password
 
    - [OPTIONAL: Add possibility to unlock via SSH (dropbear-initramfs)](#optional-add-possibility-to-unlock-via-ssh-dropbear-initramfs)
    - [OPTIONAL: Add automated unlock via TPM](#optional-add-automated-unlock-via-tpm)
    - [OPTIONAL: Add automated unlock via USB key (not yet completed)](#optional-optional-add-automated-unlock-via-usb-key)
    - [OPTIONAL: Add automated unlock via remote server (MandOS)](#optional-add-automated-unlock-via-usb-key)
+
 7. [Enable LUKS for other disks/partitions](#enable-luks-for-other-diskspartitions)
 8. [Troubleshooting](#troubleshooting)
 9. [Discussions](#discussions)
@@ -341,10 +346,6 @@ Unallocated:
    ... or more partitions
 ```
 
-
-
-
-
 ### ZFS (RAID1), ZFS (RAID10), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)
 
 **Filesystem**
@@ -556,11 +557,133 @@ dd if=/dev/zero of=/tmp/write_test.img bs=1G count=1 oflag=dsync; rm /tmp/write_
 
 # Enable LUKS for root partition
 
-The following steps depend on your selected filesystem, disk and partition configuration. Currently only the how to for `ZFS (RAID1)`, `ZFS (RAID10)`, `ZFS (RAIDZ-1)`, `ZFS (RAIDZ-2)`, `ZFS (RAIDZ-3)` is completed.
+The following steps depend on your selected filesystem, disk and partition configuration. Currently only the how to for `ZFS (RAID0)`, `ZFS (RAID1)`, `ZFS (RAID10)`, `ZFS (RAIDZ-1)`, `ZFS (RAIDZ-2)`, `ZFS (RAIDZ-3)` is completed.
 
 ## Single disk or bundled disks without redundancy (🚨 HOW TO NOT YET COMPLETED, DO NOT ATTEMPT)
 
 Not yet completed.
+
+## ZFS (RAID0/Single Disk)
+
+This is an in-place conversion of the partition that the zpool sits on into a LUKS block device where the zpool will reside inside of.
+
+**Preparation while the host is up**
+
+See where the device is. It'll generally be `sda3` or the third partition of the main block device it's on):
+
+```bash
+zpool status -v
+lsblk -f
+```
+
+Install the required tools
+
+```bash
+apt update
+apt install cryptsetup-initramfs
+```
+
+**🚨 NOTE:** If you haven't made a backup yet, this is your last chance to do so. Refer to the [backup instructions](#backup-data).
+
+**Boot into a live Proxmox ISO.** You want to get to the shell, so do the following when you boot into the ISO
+
+- Go to Advanced > Terminal UI (Debug) > `# exit` > Now you're in the shell for the live ISO image
+
+Enable the DHCP Client so you can get an IP and get some packages (Or get networking up however you want)
+
+```bash
+ip -c a # To see the NIC
+dhclient -v <NIC>
+```
+
+Remove the enterprise repos (seems to only be the ceph one right now) and install the required tools.
+
+```bash
+rm /etc/apt/sources.lists.d/*
+apt update
+apt dist-upgrade
+apt install cryptsetup cryptsetup-initramfs
+```
+
+Load the ZFS and LUKS kernel modules
+
+```bash
+modprobe zfs
+modprobe dm-crypt
+```
+
+Perform the in-place encryption of the zpool partition (Replace `/dev/sda3` with the relevant partition). This'll provide a progress bar to monitor. We can decrease the size slightly since ZFS allows this to happen for such a small amount of data due to how their metaslabs consume space on the partition.
+
+```bash
+cryptsetup reencrypt --encrypt --type luks2 --cipher aes-xts-plain64 --key-size 512 --hash sha512 --reduce-device-size 16M /dev/sda3
+```
+
+**⚠️ NOTE:** Your system now will not boot anymore, you need to perform the next steps!
+
+Open the LUKS container and check the pool
+
+```bash
+cryptsetup open /dev/sda3 luks-sda3
+zpool import -f -d /dev/mapper -R /mnt rpool    # mount it under /mnt
+```
+
+Edit `crypttab`
+
+```bash
+nano /mnt/etc/crypttab
+
+# Inside put:
+luks-sda3  UUID=<luks-uuid>  none  luks,discard,initramfs
+
+blkid /dev/sda3 >> /mnt/etc/crypttab
+# Cut the UUID from that line just inserted into the file and format it like above
+```
+
+Edit `/etc/kernel/cmdline` (For a systemd boot system)
+
+```bash
+nano /mnt/etc/kernel/cmdline
+
+# Normally it looks like:
+root=ZFS=rpool/ROOT/pve-1 boot=zfs
+
+# But it needs to have the luks stuff in it now like:
+cryptdevice=/dev/sda3:luks-sda3 root=ZFS=rpool/ROOT/pve-1 resume=/dev/mapper/luks-sda3 boot=zfs
+```
+
+Add `dmcrypt` to `/mnt/etc/initramfs-tools/modules`. This'll take a few steps as we need to regenerate the initiramdisk from inside the live ISO via `chroot`
+
+```bash
+# 0. pool already imported and mounted at /mnt
+#    (rpool/ROOT/pve-1 should be visible as /mnt)
+
+# 1. bind-mount the pseudo-filesystems
+for fs in proc sys dev run; do
+    mount --rbind /$fs /mnt/$fs
+done
+
+# 2. enter the chroot
+chroot /mnt /bin/bash
+
+# 3. inside the chroot
+zpool set cachefile=/etc/zfs/zpool.cache rpool
+update-initramfs -u -k all             # now sees /lib/modules/<kver>
+proxmox-boot-tool refresh              # or update-grub, if you use GRUB
+exit                                   # leave the chroot
+
+# 4. clean up
+for fs in run dev sys proc; do
+    umount -R /mnt/$fs
+done
+```
+
+**Now you can reboot** But there is one last step after the reboot. After entering the password to unlock the LUKS device, you'll drop to the initramfs prompt and will need to force import the zpool
+
+```bash
+zpool import -f rpool
+```
+
+Reboot again to test that the system fully boots. If it does, you are done. You can now pair this with DropBear, Clevis + Tang or whatever other unlock method you choose.
 
 ## ZFS (RAID1), ZFS (RAID10), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)
 
@@ -577,6 +700,7 @@ Here are some common disk names for different types of physical devices:
 - **SATA/SAS HDD/SSD**: `sda`, `sdb`, `sdc`, etc.
 
   Partition 3 would be `sda3`, `sdb3`, `sdc3`, etc.
+
 - **NVMe SSD**: `nvme0n1`, `nvme1n1`, `nvme2n1`, etc.
 
   Partition 3 would be `nvme0n1p3`, `nvme1n1p3`, `nvme2n1p3`, etc.
