@@ -1160,9 +1160,22 @@ Install mandos server from the apt repositories of your Debian or Ubuntu based s
 apt update && apt install mandos -y
 ```
 
-Edit `/etc/mandos/clients.conf` using a text editor e.g `nano` and copy the secret from mandos-keygen to the end of file:
+Edit `/etc/mandos/clients.conf` using a text editor e.g `nano` and copy the secret from `mandos-keygen` to the end of file:
 ```bash
 nano /etc/mandos/clients.conf
+```
+There seem to be a quirk where Mandos cannot use /var/lib/mandos as a directory to store state.
+We create a new one at `/srv` , set permissions and add it to the Mandos server config file.
+
+```bash
+mkdir /srv/mandos
+chown _mandos:_mandos /srv/mandos
+chmod 755 /srv/mandos
+```
+
+Uncomment and change the line `;statedir = /var/lib/mandos` to `statedir = /srv/mandos` in the config file:
+```bash
+nano /etc/mandos/mandos.conf
 ```
 
 Enable Mandos systemd service and start Mandos server:
@@ -1170,7 +1183,7 @@ Enable Mandos systemd service and start Mandos server:
 systemctl enable mandos.service --now
 ```
 
-Now you can reboot your encrypted client and it will unlock your encrypted root filesystemautomatically.
+Now you can reboot your encrypted PVE host and it will unlock the encrypted root filesystem automatically.
 
 # Enable LUKS for other disks/partitions
 
