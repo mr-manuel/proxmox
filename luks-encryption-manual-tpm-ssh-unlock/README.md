@@ -1137,11 +1137,13 @@ For Mandos to work without configuration it is important that the system has a n
 ### Client side
 Perform the following steps on the Proxmox host(s) you want to remotely unlock:
 Install mandos-client:
+
 ```bash
 apt upgrade && apt install mandos-client -y
 ```
 
 Run the mandos-keygen for generating certificate and keys, and provide your LUKS password.
+
 ```bash
 mandos-keygen --force --password
 ```
@@ -1149,6 +1151,7 @@ mandos-keygen --force --password
 It will output a block of text, this you will copy manually to the end to the Mandos server's `/etc/mandos/clients.conf` file.
 
 Update initramfs to include Mandos client:
+
 ```bash
 update-initramfs -u -k all
 ```
@@ -1156,34 +1159,40 @@ update-initramfs -u -k all
 ### Server side
 
 Install mandos server from the apt repositories of your Debian or Ubuntu based system:
+Prefix `sudo` if you are not logged in as root.
+
 ```bash
 apt update && apt install mandos -y
 ```
 
 Edit `/etc/mandos/clients.conf` using a text editor e.g `nano` and copy the secret from `mandos-keygen` to the end of file:
+
 ```bash
 nano /etc/mandos/clients.conf
 ```
-There seem to be a quirk where Mandos cannot use /var/lib/mandos as a directory to store state.
-We create a new one at `/srv` , set permissions and add it to the Mandos server config file.
+
+Mandos Server performs checks to see if the clients are online, and it does so by using DNS hostname.
+Check if you can reach the DNS name of your your PVE host from the Mandos server.
 
 ```bash
-mkdir /srv/mandos
-chown _mandos:_mandos /srv/mandos
-chmod 755 /srv/mandos
+ping <your-DNS-hostname>
 ```
 
-Uncomment and change the line `;statedir = /var/lib/mandos` to `statedir = /srv/mandos` in the config file:
+If not reachable you can edit the `host = xxxxxxx.xxx` in the `/etc/mandos/clients.conf` and switch it for the IP address of the PVE host.
+But the preferred way is either to make the hostname resolve by setting it in your router, or edit the `/etc/hosts` file on the Mandos server and enter the IP and hostname on a new line.
+
 ```bash
-nano /etc/mandos/mandos.conf
+nano /etc/hosts
 ```
 
 Enable Mandos systemd service and start Mandos server:
+
 ```bash
 systemctl enable mandos.service --now
 ```
 
 Now you can reboot your encrypted PVE host and it will unlock the encrypted root filesystem automatically.
+If you want to change settings like timeouts, please refer to the manpages or https://www.recompile.se/mandos#The_Manual_Pages
 
 # Enable LUKS for other disks/partitions
 
