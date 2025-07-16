@@ -678,28 +678,28 @@ Edit `/mnt/etc/crypttab`:
 *_-- SATA/SCSI/SAS HDD drives_*
 ```bash
 # Modify the line which was added with the command before:
-/dev/sda3: UUID="<partition uuid>" TYPE="crypto_LUKS" PARTUUID="<unneeded uuid>"
+/dev/sda3: UUID="<partition UUID>" TYPE="crypto_LUKS" PARTUUID="<unneeded UUID>"
 
 # to this:
-luks-sda3    UUID="<partition uuid>"    none    luks,discard,initramfs
+luks-sda3    UUID="<partition UUID>"    none    luks,initramfs
 ```
 
 *_-- SATA/SCSI/SAS SSD drives_*
 ```bash
 # Modify the line which was added with the command before:
-/dev/sda3: UUID="<partition uuid>" TYPE="crypto_LUKS" PARTUUID="<unneeded uuid>"
+/dev/sda3: UUID="<partition UUID>" TYPE="crypto_LUKS" PARTUUID="<unneeded UUID>"
 
 # Add this (gives 20-30% better performance when using SSD):
-luks-sda3    UUID="<uuid>"    none    luks,discard,initramfs,perf-no_read_workqueue,perf-no_write_workqueue
+luks-sda3    UUID="<UUID>"    none    luks,discard,initramfs,perf-no_read_workqueue,perf-no_write_workqueue
 ```
 
 *_-- NVMe drives_*
 ```bash
 # Modify the line which was added with the command before:
-/dev/nvme0n1p3: UUID="<partition uuid>" TYPE="crypto_LUKS" PARTUUID="<unneeded uuid>"
+/dev/nvme0n1p3: UUID="<partition UUID>" TYPE="crypto_LUKS" PARTUUID="<unneeded UUID>"
 
 # Add this (gives 20-30% better performance when using SSD):
-luks-nvme0n1p3    UUID=<partition uuid>    none    luks,discard,initramfs,perf-no_read_workqueue,perf-no_write_workqueue
+luks-nvme0n1p3    UUID=<partition UUID>    none    luks,discard,initramfs,perf-no_read_workqueue,perf-no_write_workqueue
 ```
 
 Edit `/etc/kernel/cmdline` (for a systemd boot system)
@@ -710,7 +710,7 @@ Edit `/etc/kernel/cmdline` (for a systemd boot system)
 root=ZFS=rpool/ROOT/pve-1 boot=zfs
 
 # But it needs to have the luks stuff in it now like:
-cryptdevice=/dev/sda3:luks-sda3 root=ZFS=rpool/ROOT/pve-1 boot=zfs
+cryptdevice=UUID=<partition UUID>:luks-sda3 root=ZFS=rpool/ROOT/pve-1 boot=zfs
 ```
 
 *_-- NVMe drives_*
@@ -719,7 +719,7 @@ cryptdevice=/dev/sda3:luks-sda3 root=ZFS=rpool/ROOT/pve-1 boot=zfs
 root=ZFS=rpool/ROOT/pve-1 boot=zfs
 
 # But it needs to have the luks stuff in it now like:
-cryptdevice=/dev/nvme0n1p3:luks-nvme0n1p3 root=ZFS=rpool/ROOT/pve-1 boot=zfs
+cryptdevice=UUID=<partition UUID>:luks-nvme0n1p3 root=ZFS=rpool/ROOT/pve-1 boot=zfs
 ```
 
 Add `dmcrypt` to `/mnt/etc/initramfs-tools/modules`. This'll take a few steps as we need to regenerate the initiramdisk from inside the live ISO via `chroot`:
@@ -932,6 +932,12 @@ errors: No known data errors
 
 #### Repeat the following step for every ZFS partition
 
+To ensure data integrity and detect any silent corruption, run a scrub on the ZFS pool. Scrubbing reads all data blocks, verifies their checksums, and automatically repairs any corrupted data using redundancy (if available):
+
+```bash
+zpool scrub rpool
+```
+
 Start with partition 3 of the first disk `sda3`/`nvme0n1p3`, proceed with partition 3 of the second disk `sdb3`/`nvme1n1p3`, etc.
 
 Take the `sda3`/`nvme0n1p3` offline in the ZFS pool (if you don't know where this ID came from, see the instructions above):
@@ -1084,20 +1090,20 @@ Check, if your kernel cmdline file `/etc/kernel/cmdline` looks like this:
 root=ZFS=rpool/ROOT/pve-1 boot=zfs
 ```
 
-Then overwrite the kernel cmdline file `/etc/kernel/cmdline` with this command. Make sure you add all partitions that are in the `rpool` (root ZFS pool) and need to be decrypted on boot:
+Then modify the kernel cmdline file `/etc/kernel/cmdline` like this. Make sure you add all partitions that are in the `rpool` (root ZFS pool) and need to be decrypted on boot:
 
 *_-- SATA/SCSI/SAS drives_*
 ```bash
 # For ZFS (RAID1), ZFS (RAID10), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)
 # You need to add all ZFS partitions of the rpool (root ZFS pool)
-echo 'cryptdevice=/dev/sda3:luks-sda3 cryptdevice=/dev/sdb3:luks-sdb3 root=ZFS=rpool/ROOT/pve-1 boot=zfs' > /etc/kernel/cmdline
+cryptdevice=UUID=<partition UUID-1>:luks-sda3 cryptdevice=UUID=<partition UUID-2>:luks-sdb3 root=ZFS=rpool/ROOT/pve-1 boot=zfs
 ```
 
-*_-- NVMe drives_*
+*_-- NVME drives_*
 ```bash
 # For ZFS (RAID1), ZFS (RAID10), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)
 # You need to add all ZFS partitions of the rpool (root ZFS pool)
-echo 'cryptdevice=/dev/nvme0n1p3:luks-nvme0n1p3 cryptdevice=/dev/nvme1n1p3:luks-nvme1n1p3 root=ZFS=rpool/ROOT/pve-1 boot=zfs' > /etc/kernel/cmdline
+cryptdevice=UUID=<partition UUID-1>:luks-nvme0n1p3 cryptdevice=UUID=<partition UUID-2>:luks-nvme1n1p3 root=ZFS=rpool/ROOT/pve-1 boot=zfs
 ```
 
 Add module to initramfs file `/etc/initramfs-tools/modules`:
