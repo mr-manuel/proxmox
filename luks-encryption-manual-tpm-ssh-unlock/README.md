@@ -681,7 +681,7 @@ Edit `/mnt/etc/crypttab`:
 /dev/sda3: UUID="<partition UUID>" TYPE="crypto_LUKS" PARTUUID="<unneeded UUID>"
 
 # to this:
-luks-sda3    UUID="<partition UUID>"    none    luks,initramfs
+luks-sda3    UUID="<partition UUID>"    crypt_disks    luks,initramfs,keyscript=decrypt_keyctl
 ```
 
 *_-- SATA/SCSI/SAS SSD drives_*
@@ -690,7 +690,7 @@ luks-sda3    UUID="<partition UUID>"    none    luks,initramfs
 /dev/sda3: UUID="<partition UUID>" TYPE="crypto_LUKS" PARTUUID="<unneeded UUID>"
 
 # Add this (gives 20-30% better performance when using SSD):
-luks-sda3    UUID="<UUID>"    none    luks,discard,initramfs,perf-no_read_workqueue,perf-no_write_workqueue
+luks-sda3    UUID="<UUID>"    crypt_disks    luks,initramfs,keyscript=decrypt_keyctl,discard,perf-no_read_workqueue,perf-no_write_workqueue
 ```
 
 *_-- NVMe drives_*
@@ -699,7 +699,7 @@ luks-sda3    UUID="<UUID>"    none    luks,discard,initramfs,perf-no_read_workqu
 /dev/nvme0n1p3: UUID="<partition UUID>" TYPE="crypto_LUKS" PARTUUID="<unneeded UUID>"
 
 # Add this (gives 20-30% better performance when using SSD):
-luks-nvme0n1p3    UUID=<partition UUID>    none    luks,discard,initramfs,perf-no_read_workqueue,perf-no_write_workqueue
+luks-nvme0n1p3    UUID=<partition UUID>    crypt_disks    luks,initramfs,keyscript=decrypt_keyctl,discard,perf-no_read_workqueue,perf-no_write_workqueue
 ```
 
 Edit `/etc/kernel/cmdline` (for a systemd boot system)
@@ -1064,22 +1064,22 @@ Modify the crypttab file `/etc/crypttab` by adding these lines. Replace the part
 
 *_-- SATA/SCSI/SAS HDD drives_*
 ```
-luks-sda3 UUID="<partition UUID-1>" none luks,discard,initramfs
-luks-sdb3 UUID="<partition UUID-2>" none luks,discard,initramfs
+luks-sda3    UUID="<partition UUID-1>"    crypt_disks    luks,initramfs,keyscript=decrypt_keyctl
+luks-sdb3    UUID="<partition UUID-2>"    crypt_disks    luks,initramfs,keyscript=decrypt_keyctl
 ... eventually further partitions of the root partition/rpool (root ZFS partition)
 ```
 
 *_-- SATA/SCSI/SAS SSD drives (gives 20-30% better performance when using SSD)_*
 ```
-luks-sda3 UUID="<partition UUID-1>" none luks,discard,initramfs,perf-no_read_workqueue,perf-no_write_workqueue
-luks-sdb3 UUID="<partition UUID-2>" none luks,discard,initramfs,perf-no_read_workqueue,perf-no_write_workqueue
+luks-sda3    UUID="<partition UUID-1>"    crypt_disks    luks,initramfs,keyscript=decrypt_keyctl,discard,perf-no_read_workqueue,perf-no_write_workqueue
+luks-sdb3    UUID="<partition UUID-2>"    crypt_disks    luks,initramfs,keyscript=decrypt_keyctl,discard,perf-no_read_workqueue,perf-no_write_workqueue
 ... eventually further partitions of the root partition/rpool (root ZFS partition)
 ```
 
 *_-- NVMe drives (gives 20-30% better performance when using SSD)_*
 ```
-luks-nvme0n1p3 UUID="<partition UUID-1>" none luks,discard,initramfs,perf-no_read_workqueue,perf-no_write_workqueue
-luks-nvme1n1p3 UUID="<partition UUID-2>" none luks,discard,initramfs,perf-no_read_workqueue,perf-no_write_workqueue
+luks-nvme0n1p3    UUID="<partition UUID-1>"    crypt_disks    luks,initramfs,keyscript=decrypt_keyctl,discard,perf-no_read_workqueue,perf-no_write_workqueue
+luks-nvme1n1p3    UUID="<partition UUID-2>"    crypt_disks    luks,initramfs,keyscript=decrypt_keyctl,discard,perf-no_read_workqueue,perf-no_write_workqueue
 ... eventually further partitions of the root partition/rpool (root ZFS partition)
 ```
 
