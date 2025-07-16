@@ -40,6 +40,7 @@ What this how to covers:
 
    Reconfigure the boot loader to be able to boot and asking for the LUKS password
 
+   - [For ZFS filesystems as root partition](#for-zfs-filesystems-as-root-partition)
    - [OPTIONAL: Add possibility to unlock via SSH (dropbear-initramfs)](#optional-add-possibility-to-unlock-via-ssh-dropbear-initramfs)
    - [OPTIONAL: Add automated unlock via TPM](#optional-add-automated-unlock-via-tpm)
    - [OPTIONAL: Add automated unlock via USB key (not yet completed)](#optional-optional-add-automated-unlock-via-usb-key)
@@ -142,7 +143,7 @@ Your current disk and partition setup should look similar to something like this
 
 **Filesystem**
 
-EXT4
+*_-- EXT4_*
 
 ```
 root@pve01:~# df -T /
@@ -150,7 +151,7 @@ Filesystem           Type 1K-blocks    Used Available Use% Mounted on
 /dev/mapper/pve-root ext4 100597760 3417040  97180720   4% /
 ```
 
-XFS
+*_-- XFS_*
 
 ```
 root@pve01:~# df -T /
@@ -160,6 +161,7 @@ Filesystem           Type 1K-blocks    Used Available Use% Mounted on
 
 **Disk layout**
 
+*_-- SATA/SCSI/SAS drives_*
 ```
 root@pve01:~# lsblk
 NAME               MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
@@ -175,8 +177,7 @@ sda                  8:0    0  1.8T  0 disk
     └─pve-data     252:4    0  1.8T  0 lvm
 ```
 
-or
-
+*_-- NVMe drives_*
 ```
 root@pve01:~# lsblk
 NAME               MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
@@ -204,6 +205,7 @@ rpool/ROOT/pve-1 zfs  824576000 5292672 819283328   1% /
 
 **Disk layout**
 
+*_-- SATA/SCSI/SAS drives_*
 ```
 root@pve01:~# lsblk | grep -v zd
 NAME      MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
@@ -214,8 +216,7 @@ sda         8:0    0  1.8T  0 disk
 ... or more disks and partitions
 ```
 
-or
-
+*_-- NVMe drives_*
 ```
 root@pve01:~# lsblk | grep -v zd
 NAME        MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
@@ -248,6 +249,7 @@ Filesystem     Type  1K-blocks    Used Available Use% Mounted on
 
 **Disk layout**
 
+*_-- SATA/SCSI/SAS drives_*
 ```
 root@pve01:~# lsblk
 NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
@@ -258,8 +260,7 @@ sda      8:0    0  1.8T  0 disk
 ... or more disks and partitions
 ```
 
-or
-
+*_-- NVMe drives_*
 ```
 root@pve01:~# lsblk
 NAME        MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
@@ -360,6 +361,7 @@ rpool/ROOT/pve-1 zfs  824576000 5292672 819283328   1% /
 
 Your current disk and partition setup should look similar to something like this:
 
+*_-- SATA/SCSI/SAS drives_*
 ```
 root@pve01:~# lsblk | grep -v zd
 NAME      MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
@@ -374,8 +376,7 @@ sdb         8:16   0   1.8T  0 disk
 ... or more disks and partitions
 ```
 
-or
-
+*_-- NVMe drives_*
 ```
 root@pve01:~# lsblk | grep -v zd
 NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
@@ -412,6 +413,7 @@ Filesystem     Type  1K-blocks    Used Available Use% Mounted on
 
 **Disk layout**
 
+*_-- SATA/SCSI/SAS drives_*
 ```
 root@pve01:~# lsblk
 NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
@@ -426,8 +428,7 @@ sdb      8:16   0  1.8T  0 disk
 ... or more disks and partitions
 ```
 
-or
-
+*_-- NVMe drives_*
 ```
 root@pve01:~# lsblk
 NAME        MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
@@ -452,6 +453,7 @@ root@pve01:~# btrfs fi usage /
 
 should contain
 
+*_-- SATA/SCSI/SAS drives_*
 ```
 Overall:
     Device size:                   3.60TiB
@@ -484,8 +486,7 @@ Unallocated:
    /dev/sdb3       3.59TiB
 ```
 
-or
-
+*_-- NVMe drives_*
 ```
 Overall:
     Device size:                   3.60TiB
@@ -528,8 +529,25 @@ Backup Proxmox VE VM's: https://proxmox.com/en/products/proxmox-backup-server/ge
 
 Example of backing up one partition:
 
+
+*_-- SATA/SCSI/SAS drives_*
 ```bash
-dd if=/dev/sda3 bs=4M of=/path/to/backup/sda3.img
+# does also save whitespace
+dd conv=sparse status=progress if=/dev/sda3 bs=4M of=/path/to/backup/sda3.img
+# used default compression (-6)
+dd if=/dev/sda3 status=progress | gzip > /path/to/backup/sda3.img.gz
+# uses least compression (fastest, while compressing whitespace)
+dd if=/dev/sda3 status=progress | gzip -1 > /path/to/backup/sda3.img.gz
+```
+
+*_-- NVMe drives_*
+```bash
+# does also save whitespace
+dd conv=sparse status=progress if=/dev/nvme0n1p3 bs=4M of=/path/to/backup/nvme0n1p3.img
+# used default compression (-6)
+dd if=/dev/nvme0n1p3 status=progress | gzip > /path/to/backup/nvme0n1p3.img.gz
+# uses least compression (fastest, while compressing whitespace)
+dd if=/dev/nvme0n1p3 status=progress | gzip -1 > /path/to/backup/nvme0n1p3.img.gz
 ```
 
 Example on how to make a backup with ZFS send/recv can be found here: [github.com/zenaan/quick-fixes-ftfw/blob/master/zfs/zfs.md](https://github.com/zenaan/quick-fixes-ftfw/blob/master/zfs/zfs.md#tutorial-1-zfs-backups---sendrecv)
@@ -569,7 +587,7 @@ This is an in-place conversion of the partition that the zpool sits on into a LU
 
 **Preparation while the host is up**
 
-See where the device is. It'll generally be `sda3` or the third partition of the main block device it's on):
+See where the device is. It'll generally be `sda3`, `nvme0n1p3` or the third partition of the main block device it's on:
 
 ```bash
 zpool status -v
@@ -592,7 +610,7 @@ apt install cryptsetup-initramfs
 Enable the DHCP Client so you can get an IP and get some packages (Or get networking up however you want)
 
 ```bash
-ip -c a # To see the NIC
+ip -c a  # To see the NIC
 dhclient -v <NIC>
 ```
 
@@ -612,46 +630,99 @@ modprobe zfs
 modprobe dm-crypt
 ```
 
-Perform the in-place encryption of the zpool partition (Replace `/dev/sda3` with the relevant partition). This'll provide a progress bar to monitor. We can decrease the size slightly since ZFS allows this to happen for such a small amount of data due to how their metaslabs consume space on the partition.
+Perform the in-place encryption of the zpool partition (replace `/dev/sda3` or `/dev/nvme0n1p3` with the relevant partition). This'll provide a progress bar to monitor. We can decrease the size slightly since ZFS allows this to happen for such a small amount of data due to how their metaslabs consume space on the partition.
 
+*_-- SATA/SCSI/SAS drives_*
 ```bash
 cryptsetup reencrypt --encrypt --type luks2 --cipher aes-xts-plain64 --key-size 512 --hash sha512 --reduce-device-size 16M /dev/sda3
 ```
 
+*_-- NVMe drives_*
+```bash
+cryptsetup reencrypt --encrypt --type luks2 --cipher aes-xts-plain64 --key-size 512 --hash sha512 --reduce-device-size 16M /dev/nvme0n1p3
+```
+
+
 **⚠️ NOTE:** Your system now will not boot anymore, you need to perform the next steps!
 
-Open the LUKS container and check the pool
+Open the LUKS container and check the pool:
 
+*_-- SATA/SCSI/SAS drives_*
 ```bash
 cryptsetup open /dev/sda3 luks-sda3
 zpool import -f -d /dev/mapper -R /mnt rpool    # mount it under /mnt
 ```
 
-Edit `crypttab`
-
+*_-- NVMe drives_*
 ```bash
-nano /mnt/etc/crypttab
-
-# Inside put:
-luks-sda3  UUID=<luks-uuid>  none  luks,discard,initramfs
-
-blkid /dev/sda3 >> /mnt/etc/crypttab
-# Cut the UUID from that line just inserted into the file and format it like above
+cryptsetup open /dev/nvme0n1p3 luks-nvme0n1p3
+zpool import -f -d /dev/mapper -R /mnt rpool    # mount it under /mnt
 ```
 
-Edit `/etc/kernel/cmdline` (For a systemd boot system)
+Insert the disk `UUID` and other unneeded informations into crypttab, so we can just cut out the `UUID` later:
 
+**⚠️ NOTE:** We need the `UUID` NOT the `PARTUUID`!
+
+*_-- SATA/SCSI/SAS drives_*
 ```bash
-nano /mnt/etc/kernel/cmdline
+blkid /dev/sda3 >> /mnt/etc/crypttab
+```
 
+*_-- NVMe drives_*
+```bash
+blkid /dev/nvme0n1p3 >> /mnt/etc/crypttab
+```
+
+Edit `/mnt/etc/crypttab`:
+
+*_-- SATA/SCSI/SAS HDD drives_*
+```bash
+# Modify the line which was added with the command before:
+/dev/sda3: UUID="<partition uuid>" TYPE="crypto_LUKS" PARTUUID="<unneeded uuid>"
+
+# to this:
+luks-sda3    UUID="<partition uuid>"    none    luks,discard,initramfs
+```
+
+*_-- SATA/SCSI/SAS SSD drives_*
+```bash
+# Modify the line which was added with the command before:
+/dev/sda3: UUID="<partition uuid>" TYPE="crypto_LUKS" PARTUUID="<unneeded uuid>"
+
+# Add this (gives 20-30% better performance when using SSD):
+luks-sda3    UUID="<uuid>"    none    luks,discard,initramfs,perf-no_read_workqueue,perf-no_write_workqueue
+```
+
+*_-- NVMe drives_*
+```bash
+# Modify the line which was added with the command before:
+/dev/nvme0n1p3: UUID="<partition uuid>" TYPE="crypto_LUKS" PARTUUID="<unneeded uuid>"
+
+# Add this (gives 20-30% better performance when using SSD):
+luks-nvme0n1p3    UUID=<partition uuid>    none    luks,discard,initramfs,perf-no_read_workqueue,perf-no_write_workqueue
+```
+
+Edit `/etc/kernel/cmdline` (for a systemd boot system)
+
+*_-- SATA/SCSI/SAS drives_*
+```bash
 # Normally it looks like:
 root=ZFS=rpool/ROOT/pve-1 boot=zfs
 
 # But it needs to have the luks stuff in it now like:
-cryptdevice=/dev/sda3:luks-sda3 root=ZFS=rpool/ROOT/pve-1 resume=/dev/mapper/luks-sda3 boot=zfs
+cryptdevice=/dev/sda3:luks-sda3 root=ZFS=rpool/ROOT/pve-1 boot=zfs
 ```
 
-Add `dmcrypt` to `/mnt/etc/initramfs-tools/modules`. This'll take a few steps as we need to regenerate the initiramdisk from inside the live ISO via `chroot`
+*_-- NVMe drives_*
+```bash
+# Normally it looks like:
+root=ZFS=rpool/ROOT/pve-1 boot=zfs
+
+# But it needs to have the luks stuff in it now like:
+cryptdevice=/dev/nvme0n1p3:luks-nvme0n1p3 root=ZFS=rpool/ROOT/pve-1 boot=zfs
+```
+
+Add `dmcrypt` to `/mnt/etc/initramfs-tools/modules`. This'll take a few steps as we need to regenerate the initiramdisk from inside the live ISO via `chroot`:
 
 ```bash
 # 0. pool already imported and mounted at /mnt
@@ -677,13 +748,13 @@ for fs in run dev sys proc; do
 done
 ```
 
-**Now you can reboot** But there is one last step after the reboot. After entering the password to unlock the LUKS device, you'll drop to the initramfs prompt and will need to force import the zpool
+**Now you can reboot**, but there is one last step after the reboot. After entering the password to unlock the LUKS device, you'll drop to the initramfs prompt and will need to force import the zpool.
 
 ```bash
 zpool import -f rpool
 ```
 
-Reboot again to test that the system fully boots. If it does, you are done. You can now pair this with DropBear, Clevis + Tang or whatever other unlock method you choose.
+Reboot again to test that the system fully boots. If it does, you are done. You can now pair this with DropBear, Clevis + Tang or whatever other unlock method you choose, see the [fix the boot procedure](#fix-the-boot-procedure) section.
 
 ## ZFS (RAID1), ZFS (RAID10), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)
 
@@ -693,17 +764,21 @@ Check the name of your disks and partitions with
 lsblk | grep -v zd
 ```
 
-In this guide, I will use `sda3` and `sdb3`. If your disk names are different, you will need to adjust the commands accordingly.
+In this guide, I will use `sda3`/`nvme0n1p3` and `sdb3`/`nvme1n1p3`. If your disk names are different, you will need to adjust the commands accordingly.
 
 Here are some common disk names for different types of physical devices:
 
-- **SATA/SAS HDD/SSD**: `sda`, `sdb`, `sdc`, etc.
+- **SATA/SCSI/SAS HDD/SSD**: `sda`, `sdb`, `sdc`, etc.
 
   Partition 3 would be `sda3`, `sdb3`, `sdc3`, etc.
 
 - **NVMe SSD**: `nvme0n1`, `nvme1n1`, `nvme2n1`, etc.
 
   Partition 3 would be `nvme0n1p3`, `nvme1n1p3`, `nvme2n1p3`, etc.
+
+- **VirtIO**: `vda`, `vdb`, `vdc`, etc.
+
+  Partition 3 would be `vda3`, `vdb3`, `vdc3`, etc.
 
 Check the current ZFS pool status this command and check that everything is `ONLINE` and not `DEGRADED`.
 
@@ -719,6 +794,7 @@ ls -l /dev/disk/by-id/ | grep part3
 
 Example outputs:
 
+*_-- SATA/SCSI/SAS drives_*
 ```
 root@pve01:~# ls -l /dev/disk/by-id/ | grep part3
 lrwxrwxrwx 1 root root 10 Jan  8 03:17 ata-KINGSTON_SEDC600M960G_50026B7686E0B30F-part3 -> ../../sdb3
@@ -728,6 +804,7 @@ lrwxrwxrwx 1 root root 10 Jan  8 03:17 wwn-0x50026b7686e0b385-part3 -> ../../sda
 ... or more partitions
 ```
 
+*_-- NVMe drives_*
 ```
 root@pve01:~# ls -l /dev/disk/by-id/ | grep part3
 lrwxrwxrwx 1 root root 15 Feb 13 09:41 nvme-eui.e8238fa6bf530001001b448b4d638ea9-part3 -> ../../nvme1n1p3
@@ -853,11 +930,11 @@ errors: No known data errors
 
 **🚨 NOTE:** If you haven't made a backup yet, this is your last chance to do so. Refer to the [backup instructions](#backup-data).
 
-#### Repeat this step for every ZFS partition
+#### Repeat the following step for every ZFS partition
 
-Start with partition 3 of the first disk `sda3`, proceed with partition 3 of the second disk `sdb3`, etc.
+Start with partition 3 of the first disk `sda3`/`nvme0n1p3`, proceed with partition 3 of the second disk `sdb3`/`nvme1n1p3`, etc.
 
-Take the `sda3` offline in the ZFS pool (if you don't know where this ID came from, see the instructions above):
+Take the `sda3`/`nvme0n1p3` offline in the ZFS pool (if you don't know where this ID came from, see the instructions above):
 
 ```bash
 zpool offline rpool ata-KINGSTON_SEDC600M960G_50026B7686E0B385-part3
@@ -869,39 +946,63 @@ Check the pool status again to ensure the ZFS partition was successfully taken o
 zpool status
 ```
 
-Now that `sda3` is offline from the pool, you can encrypt it using LUKS. Enter this command to encrypt with 512-bit.
+Now that `sda3`/`nvme0n1p3` is offline from the pool, you can encrypt it using LUKS. Enter this command to encrypt with 512-bit.
 
 **⚠️ NOTE:** The key size you see (512-bit) is actually two 256-bit. AES-XTS requires two keys: one for encryption and one as a tweak key.
 
-**⚠️ NOTE:** Make sure you only delete the 3rd partition of your disk and not the whole disk. `sda3`, `sdb3`, `sdc3`, etc. or `nvme0n1p3`, `nvme1n1p3`, `nvme2n1p3`, etc.
+**⚠️ NOTE:** Make sure you only delete the 3rd partition of your disk and not the whole disk. `sda3`/`nvme0n1p3`, `sdb3`/`nvme1n1p3`, `sdc3`/`nvme2n1p3`, etc.
 
+*_-- SATA/SCSI/SAS drives_*
 ```bash
-cryptsetup luksFormat --cipher aes-xts-plain64 --key-size 512 --hash sha512 --use-random /dev/sda3
+cryptsetup luksFormat --type luks2 --cipher aes-xts-plain64 --key-size 512 --hash sha512 --use-random /dev/sda3
+```
+
+*_-- NVMe drives_*
+```bash
+cryptsetup luksFormat --type luks2 --cipher aes-xts-plain64 --key-size 512 --hash sha512 --use-random /dev/nvme0n1p3
 ```
 
 confirm with `YES` (needs to be uppercase) and then enter your encryption password.
 
 Open the LUKS-encrypted partition:
 
+*_-- SATA/SCSI/SAS drives_*
 ```bash
 cryptsetup luksOpen /dev/sda3 luks-sda3
+```
+
+*_-- NVMe drives_*
+```bash
+cryptsetup luksOpen /dev/nvme0n1p3 luks-nvme0n1p3
 ```
 
 Save the LUKS header for disaster recovery. Make sure to save the header in a safe location, since with it you can unlock the partition.
 
 See also https://www.cyberciti.biz/security/how-to-backup-and-restore-luks-header-on-linux/
 
+*_-- SATA/SCSI/SAS drives_*
 ```bash
 cryptsetup luksHeaderBackup /dev/sda3 --header-backup-file /path/to/backupfile/sda3-luks-header
 ```
 
-Now that `sda3` is encrypted, you can replace the old unencrypted offline vdev with the new encrypted vdev in the ZFS pool (if you don't know where this ID came from, see the instructions above):
+*_-- NVMe drives_*
+```bash
+cryptsetup luksHeaderBackup /dev/nvme0n1p3 --header-backup-file /path/to/backupfile/nvme0n1p3-luks-header
+```
 
+Now that `sda3`/`nvme0n1p3` is encrypted, you can replace the old unencrypted offline vdev with the new encrypted vdev in the ZFS pool (if you don't know where this ID came from, see the instructions above):
+
+*_-- SATA/SCSI/SAS drives_*
 ```bash
 zpool replace rpool ata-KINGSTON_SEDC600M960G_50026B7686E0B385-part3 /dev/mapper/luks-sda3
 ```
 
-The system will begin to resilver and copy the data from the other ZFS partition(s) to `sda3`
+*_-- NVMe drives_*
+```bash
+zpool replace rpool ata-KINGSTON_SEDC600M960G_50026B7686E0B385-part3 /dev/mapper/luks-nvme0n1p3
+```
+
+The system will begin to resilver and copy the data from the other ZFS partition(s) to `sda3`/`nvme0n1p3`.
 
 Wait for the resilvering process to finish. This may take some time depending on the amount of data in your pool.
 
@@ -913,13 +1014,21 @@ zpool status
 
 Once the resilvering is complete, [repeat this step for every ZFS partition](#repeat-this-step-for-every-zfs-partition).
 
-**⚠️ NOTE:** Your system now will not boot anymore, you need to execute also the next step!
+**⚠️ NOTE:** Your system now will not boot anymore, you need to [fix the boot procedure](#fix-the-boot-procedure) now!
 
 ## BTRFS (RAID1), BTRFS (RAID10) (🚨 HOW TO NOT YET COMPLETED, DO NOT ATTEMPT)
 
 Not yet completed.
 
 # Fix the boot procedure
+
+Reconfigure the boot loader to be able to boot and asking for the LUKS password
+
+- [For ZFS filesystems as root partition](#for-zfs-filesystems-as-root-partition)
+- [OPTIONAL: Add possibility to unlock via SSH (dropbear-initramfs)](#optional-add-possibility-to-unlock-via-ssh-dropbear-initramfs)
+- [OPTIONAL: Add automated unlock via TPM](#optional-add-automated-unlock-via-tpm)
+- [OPTIONAL: Add automated unlock via USB key (not yet completed)](#optional-optional-add-automated-unlock-via-usb-key)
+- [OPTIONAL: Add automated unlock via remote server (MandOS)](#optional-add-automated-unlock-via-usb-key)
 
 ## For EXT4, XFS, BTRFS filesystems as root partition (🚨 HOW TO NOT YET COMPLETED, DO NOT TRY)
 
@@ -947,11 +1056,27 @@ Modify the crypttab file `/etc/crypttab` by adding these lines. Replace the part
 
 **⚠️ NOTE:** Pay attention to copy the `UUID` and NOT the `UUID_SUB` or `PARTUUID`! Each encrypted volume has its own `UUID`.
 
+*_-- SATA/SCSI/SAS HDD drives_*
 ```
 luks-sda3 UUID="<partition UUID-1>" none luks,discard,initramfs
 luks-sdb3 UUID="<partition UUID-2>" none luks,discard,initramfs
 ... eventually further partitions of the root partition/rpool (root ZFS partition)
 ```
+
+*_-- SATA/SCSI/SAS SSD drives (gives 20-30% better performance when using SSD)_*
+```
+luks-sda3 UUID="<partition UUID-1>" none luks,discard,initramfs,perf-no_read_workqueue,perf-no_write_workqueue
+luks-sdb3 UUID="<partition UUID-2>" none luks,discard,initramfs,perf-no_read_workqueue,perf-no_write_workqueue
+... eventually further partitions of the root partition/rpool (root ZFS partition)
+```
+
+*_-- NVMe drives (gives 20-30% better performance when using SSD)_*
+```
+luks-nvme0n1p3 UUID="<partition UUID-1>" none luks,discard,initramfs,perf-no_read_workqueue,perf-no_write_workqueue
+luks-nvme1n1p3 UUID="<partition UUID-2>" none luks,discard,initramfs,perf-no_read_workqueue,perf-no_write_workqueue
+... eventually further partitions of the root partition/rpool (root ZFS partition)
+```
+
 
 Check, if your kernel cmdline file `/etc/kernel/cmdline` looks like this:
 
@@ -961,10 +1086,18 @@ root=ZFS=rpool/ROOT/pve-1 boot=zfs
 
 Then overwrite the kernel cmdline file `/etc/kernel/cmdline` with this command. Make sure you add all partitions that are in the `rpool` (root ZFS pool) and need to be decrypted on boot:
 
+*_-- SATA/SCSI/SAS drives_*
 ```bash
 # For ZFS (RAID1), ZFS (RAID10), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)
 # You need to add all ZFS partitions of the rpool (root ZFS pool)
-echo 'cryptdevice=/dev/sda3:luks-sda3 cryptdevice=/dev/sdb3:luks-sdb3 root=ZFS=rpool/ROOT/pve-1 resume=/dev/mapper/luks-sda3 resume=/dev/mapper/luks-sdb3 boot=zfs' > /etc/kernel/cmdline
+echo 'cryptdevice=/dev/sda3:luks-sda3 cryptdevice=/dev/sdb3:luks-sdb3 root=ZFS=rpool/ROOT/pve-1 boot=zfs' > /etc/kernel/cmdline
+```
+
+*_-- NVMe drives_*
+```bash
+# For ZFS (RAID1), ZFS (RAID10), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)
+# You need to add all ZFS partitions of the rpool (root ZFS pool)
+echo 'cryptdevice=/dev/nvme0n1p3:luks-nvme0n1p3 cryptdevice=/dev/nvme1n1p3:luks-nvme1n1p3 root=ZFS=rpool/ROOT/pve-1 boot=zfs' > /etc/kernel/cmdline
 ```
 
 Add module to initramfs file `/etc/initramfs-tools/modules`:
@@ -993,6 +1126,13 @@ proxmox-boot-tool refresh
 ```
 
 If this commands finished without errors you can now reboot and enter the passwort at boot.
+
+Additionally there are more possibilities to unlock LUKS at boot:
+
+- [OPTIONAL: Add possibility to unlock via SSH (dropbear-initramfs)](#optional-add-possibility-to-unlock-via-ssh-dropbear-initramfs)
+- [OPTIONAL: Add automated unlock via TPM](#optional-add-automated-unlock-via-tpm)
+- [OPTIONAL: Add automated unlock via USB key (not yet completed)](#optional-optional-add-automated-unlock-via-usb-key)
+- [OPTIONAL: Add automated unlock via remote server (MandOS)](#optional-add-automated-unlock-via-usb-key)
 
 ## OPTIONAL: Add possibility to unlock via SSH (dropbear-initramfs)
 
@@ -1079,24 +1219,46 @@ apt install -y tpm2-tools clevis clevis-luks clevis-tpm2 clevis-initramfs
 
 Bind the LUKS partition to TPM2 using Clevis.
 
+*_-- SATA/SCSI/SAS drives_*
 ```bash
 clevis luks bind -d /dev/sda3 tpm2 '{"pcr_bank":"sha256", "pcr_ids":"1,7"}'
 
 clevis luks bind -d /dev/sdb3 tpm2 '{"pcr_bank":"sha256", "pcr_ids":"1,7"}'
 ```
 
+*_-- NVMe drives_*
+```bash
+clevis luks bind -d /dev/nvme0n1p3 tpm2 '{"pcr_bank":"sha256", "pcr_ids":"1,7"}'
+
+clevis luks bind -d /dev/nvme1n1p3 tpm2 '{"pcr_bank":"sha256", "pcr_ids":"1,7"}'
+```
+
 Test if the unlock works:
 
+*_-- SATA/SCSI/SAS drives_*
 ```bash
 clevis luks unlock -d /dev/sda3
 clevis luks unlock -d /dev/sdb3
 ```
 
+*_-- NVMe drives_*
+```bash
+clevis luks unlock -d /dev/nvme0n1p3
+clevis luks unlock -d /dev/nvme1n1p3
+```
+
 If it worked you will get
 
+*_-- SATA/SCSI/SAS drives_*
 ```
 Cannot use device /dev/sda3 which is in use (already mapped or mounted).
 Cannot use device /dev/sdb3 which is in use (already mapped or mounted).
+```
+
+*_-- NVMe drives_*
+```
+Cannot use device /dev/nvme0n1p3 which is in use (already mapped or mounted).
+Cannot use device /dev/nvme1n1p3 which is in use (already mapped or mounted).
 ```
 
 Update initramfs with this command:
