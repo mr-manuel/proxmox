@@ -702,25 +702,6 @@ luks-sda3    UUID="<UUID>"    crypt_disks    luks,initramfs,keyscript=decrypt_ke
 luks-nvme0n1p3    UUID=<partition UUID>    crypt_disks    luks,initramfs,keyscript=decrypt_keyctl,discard,perf-no_read_workqueue,perf-no_write_workqueue
 ```
 
-Edit `/etc/kernel/cmdline` (for a systemd boot system)
-
-*_-- SATA/SCSI/SAS drives_*
-```bash
-# Normally it looks like:
-root=ZFS=rpool/ROOT/pve-1 boot=zfs
-
-# But it needs to have the luks stuff in it now like:
-cryptdevice=UUID=<partition UUID>:luks-sda3 root=ZFS=rpool/ROOT/pve-1 boot=zfs
-```
-
-*_-- NVMe drives_*
-```bash
-# Normally it looks like:
-root=ZFS=rpool/ROOT/pve-1 boot=zfs
-
-# But it needs to have the luks stuff in it now like:
-cryptdevice=UUID=<partition UUID>:luks-nvme0n1p3 root=ZFS=rpool/ROOT/pve-1 boot=zfs
-```
 
 Add `dmcrypt` to `/mnt/etc/initramfs-tools/modules`. This'll take a few steps as we need to regenerate the initiramdisk from inside the live ISO via `chroot`:
 
@@ -1088,22 +1069,6 @@ Check, if your kernel cmdline file `/etc/kernel/cmdline` looks like this:
 
 ```
 root=ZFS=rpool/ROOT/pve-1 boot=zfs
-```
-
-Then modify the kernel cmdline file `/etc/kernel/cmdline` like this. Make sure you add all partitions that are in the `rpool` (root ZFS pool) and need to be decrypted on boot:
-
-*_-- SATA/SCSI/SAS drives_*
-```bash
-# For ZFS (RAID1), ZFS (RAID10), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)
-# You need to add all ZFS partitions of the rpool (root ZFS pool)
-cryptdevice=UUID=<partition UUID-1>:luks-sda3 cryptdevice=UUID=<partition UUID-2>:luks-sdb3 root=ZFS=rpool/ROOT/pve-1 boot=zfs
-```
-
-*_-- NVME drives_*
-```bash
-# For ZFS (RAID1), ZFS (RAID10), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)
-# You need to add all ZFS partitions of the rpool (root ZFS pool)
-cryptdevice=UUID=<partition UUID-1>:luks-nvme0n1p3 cryptdevice=UUID=<partition UUID-2>:luks-nvme1n1p3 root=ZFS=rpool/ROOT/pve-1 boot=zfs
 ```
 
 Add module to initramfs file `/etc/initramfs-tools/modules`:
