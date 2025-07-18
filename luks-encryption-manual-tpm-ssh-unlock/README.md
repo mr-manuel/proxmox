@@ -579,7 +579,7 @@ The following steps depend on your selected filesystem, disk and partition confi
 
 ## Single disk or bundled disks without redundancy (🚨 HOW TO NOT YET COMPLETED, DO NOT ATTEMPT)
 
-Not yet completed.
+Not yet completed for all filesystems.
 
 ## ZFS (RAID0/Single Disk)
 
@@ -603,34 +603,34 @@ apt install cryptsetup-initramfs
 
 **🚨 NOTE:** If you haven't made a backup yet, this is your last chance to do so. Refer to the [backup instructions](#backup-data).
 
-**Boot into a live Proxmox ISO.** You want to get to the shell, so do the following when you boot into the ISO
+**Boot into a live shell**
 
-- Go to Advanced > Terminal UI (Debug) > `# exit` > Now you're in the shell for the live ISO image
+To access the live shell, boot from the [Proxmox VE ISO](https://www.proxmox.com/en/downloads). Then select `Advanced Options` -> `Install Proxmox VE (Terminal UI, Debug Mode)`. As soon as the log don't move anymore press enter. Type `exit` and press enter again. Now you are in the live shell.
 
-Enable the DHCP Client so you can get an IP and get some packages (Or get networking up however you want)
+Enable the DHCP client to get an IP and ne able to download some packages:
 
 ```bash
-ip -c a  # To see the NIC
+ip -c a  # Get the nic, normally eth or ens
 dhclient -v <NIC>
 ```
 
-Remove the enterprise repos (seems to only be the ceph one right now) and install the required tools.
+Remove the enterprise repositories (seems to only be the ceph one right now) and install the required tools:
 
 ```bash
 rm /etc/apt/sources.lists.d/*
 apt update
-apt dist-upgrade
-apt install cryptsetup cryptsetup-initramfs
+apt dist-upgrade -y
+apt install cryptsetup cryptsetup-initramfs -y
 ```
 
-Load the ZFS and LUKS kernel modules
+Load the ZFS and LUKS kernel modules:
 
 ```bash
 modprobe zfs
 modprobe dm-crypt
 ```
 
-Perform the in-place encryption of the zpool partition (replace `/dev/sda3` or `/dev/nvme0n1p3` with the relevant partition). This'll provide a progress bar to monitor. We can decrease the size slightly since ZFS allows this to happen for such a small amount of data due to how their metaslabs consume space on the partition.
+The ZFS pool partition will now be encrypted in-place. This command shows a progress bar so you can monitor the process. You can slightly reduce the partition size, as ZFS can handle small reductions due to how its metaslabs manage space.
 
 *_-- SATA/SCSI/SAS drives_*
 ```bash
@@ -642,21 +642,22 @@ cryptsetup reencrypt --encrypt --type luks2 --cipher aes-xts-plain64 --key-size 
 cryptsetup reencrypt --encrypt --type luks2 --cipher aes-xts-plain64 --key-size 512 --hash sha512 --reduce-device-size 16M /dev/nvme0n1p3
 ```
 
+When prompted, type `YES` (in uppercase) to confirm. Then enter your encryption password. Note: You will not see any characters while typing your password.
 
 **⚠️ NOTE:** Your system now will not boot anymore, you need to perform the next steps!
 
-Open the LUKS container and check the pool:
+Open the LUKS container and mount the pool:
 
 *_-- SATA/SCSI/SAS drives_*
 ```bash
 cryptsetup open /dev/sda3 luks-sda3
-zpool import -f -d /dev/mapper -R /mnt rpool    # mount it under /mnt
+zpool import -f -d /dev/mapper -R /mnt rpool  # mounts all under /mnt
 ```
 
 *_-- NVMe drives_*
 ```bash
 cryptsetup open /dev/nvme0n1p3 luks-nvme0n1p3
-zpool import -f -d /dev/mapper -R /mnt rpool    # mount it under /mnt
+zpool import -f -d /dev/mapper -R /mnt rpool  # mounts all under /mnt
 ```
 
 Insert the disk `UUID` and other unneeded informations into crypttab, so we can just cut out the `UUID` later:
@@ -703,21 +704,22 @@ luks-nvme0n1p3    UUID=<partition UUID>    crypt_disks    luks,initramfs,keyscri
 ```
 
 
-Add `dmcrypt` to `/mnt/etc/initramfs-tools/modules`. This'll take a few steps as we need to regenerate the initiramdisk from inside the live ISO via `chroot`:
+Add `dmcrypt` to initramfs mobules `/mnt/etc/initramfs-tools/modules`.
+To do this, you need to regenerate the initramfs from inside the live shell using `chroot`:
 
 ```bash
-# 0. pool already imported and mounted at /mnt
+# 0. Pool already imported and mounted at /mnt
 #    (rpool/ROOT/pve-1 should be visible as /mnt)
 
-# 1. bind-mount the pseudo-filesystems
+# 1. Bind-mount the pseudo-filesystems
 for fs in proc sys dev run; do
     mount --rbind /$fs /mnt/$fs
 done
 
-# 2. enter the chroot
+# 2. Enter the chroot
 chroot /mnt /bin/bash
 
-# 3. inside the chroot
+# 3. Inside the chroot
 zpool set cachefile=/etc/zfs/zpool.cache rpool
 update-initramfs -u -k all             # now sees /lib/modules/<kver>
 proxmox-boot-tool refresh              # or update-grub, if you use GRUB
@@ -729,13 +731,21 @@ for fs in run dev sys proc; do
 done
 ```
 
-**Now you can reboot**, but there is one last step after the reboot. After entering the password to unlock the LUKS device, you'll drop to the initramfs prompt and will need to force import the zpool.
+**Now you can reboot:** Press `Ctrl + Alt + Entf` to reboot.
+
+After rebooting, enter your encryption password to unlock the LUKS device.
+
+You will see the initramfs prompt. At the prompt, run the following command to import your ZFS pool (only needed once after fresh encryption):
 
 ```bash
 zpool import -f rpool
+exit
 ```
 
-Reboot again to test that the system fully boots. If it does, you are done. You can now pair this with DropBear, Clevis + Tang or whatever other unlock method you choose, see the [fix the boot procedure](#fix-the-boot-procedure) section.
+Reboot again to make sure your system boots successfully.
+
+If everything works, you can now enable additional unlock methods if desired.
+See the [fix the boot procedure](#fix-the-boot-procedure) section for more options.
 
 ## ZFS (RAID1), ZFS (RAID10), ZFS (RAIDZ-1), ZFS (RAIDZ-2), ZFS (RAIDZ-3)
 
@@ -949,7 +959,7 @@ cryptsetup luksFormat --type luks2 --cipher aes-xts-plain64 --key-size 512 --has
 cryptsetup luksFormat --type luks2 --cipher aes-xts-plain64 --key-size 512 --hash sha512 --use-random /dev/nvme0n1p3
 ```
 
-confirm with `YES` (needs to be uppercase) and then enter your encryption password.
+When prompted, type `YES` (in uppercase) to confirm. Then enter your encryption password. Note: You will not see any characters while typing your password.
 
 Open the LUKS-encrypted partition:
 
@@ -1064,14 +1074,7 @@ luks-nvme1n1p3    UUID="<partition UUID-2>"    crypt_disks    luks,initramfs,key
 ... eventually further partitions of the root partition/rpool (root ZFS partition)
 ```
 
-
-Check, if your kernel cmdline file `/etc/kernel/cmdline` looks like this:
-
-```
-root=ZFS=rpool/ROOT/pve-1 boot=zfs
-```
-
-Add module to initramfs file `/etc/initramfs-tools/modules`:
+Add `dmcrypt` to initramfs mobules `/etc/initramfs-tools/modules`:
 
 ```bash
 echo 'dmcrypt' >> /etc/initramfs-tools/modules
