@@ -617,7 +617,7 @@ dhclient -v <NIC>
 Remove the enterprise repositories (seems to only be the ceph one right now) and install the required tools:
 
 ```bash
-rm /etc/apt/sources.lists.d/*
+rm /etc/apt/sources.list.d/*
 apt update
 apt dist-upgrade -y
 apt install cryptsetup cryptsetup-initramfs -y
@@ -704,8 +704,9 @@ luks-nvme0n1p3    UUID=<partition UUID>    crypt_disks    luks,initramfs,keyscri
 ```
 
 
-Add `dmcrypt` to initramfs mobules `/mnt/etc/initramfs-tools/modules`.
-To do this, you need to regenerate the initramfs from inside the live shell using `chroot`:
+Edit `/mnt/etc/initramfs-tools/modules` and add `dmcrypt` at the bottom.
+
+To apply this changes now to the initramfs, you need to regenerate the initramfs from inside the live shell using `chroot`:
 
 ```bash
 # 0. Pool already imported and mounted at /mnt
