@@ -2,7 +2,8 @@
 
 I was searching myself a way on how to get a full encrypted node, but found no step by step how to, so here it is.
 
-**⚠️ NOTE:** I'm not responsible, if you break something. Make always sure to have a backup before you begin.
+> [!NOTE]
+> I'm not responsible, if you break something. Make always sure to have a backup before you begin.
 
 This how to works for an existing or fresh Proxmox VE installation, but currently needs a `ZFS (RAID0)`, `ZFS (RAID1)`, `ZFS (RAID10)`, `ZFS (RAIDZ-1)`, `ZFS (RAIDZ-2)`, `ZFS (RAIDZ-3)` filesystem. The how to for other filesystems and disk configurations will follow. You are welcome to help to add those steps :-)
 
@@ -601,7 +602,8 @@ apt update
 apt install cryptsetup-initramfs
 ```
 
-**🚨 NOTE:** If you haven't made a backup yet, this is your last chance to do so. Refer to the [backup instructions](#backup-data).
+> [!CAUTION]
+> If you haven't made a backup yet, this is your last chance to do so. Refer to the [backup instructions](#backup-data).
 
 **Boot into a live shell**
 
@@ -644,7 +646,8 @@ cryptsetup reencrypt --encrypt --type luks2 --cipher aes-xts-plain64 --key-size 
 
 When prompted, type `YES` (in uppercase) to confirm. Then enter your encryption password. Note: You will not see any characters while typing your password.
 
-**⚠️ NOTE:** Your system now will not boot anymore, you need to perform the next steps!
+> [!CAUTION]
+> Your system now will not boot anymore, you need to perform the next steps!
 
 Open the LUKS container and mount the pool:
 
@@ -662,7 +665,8 @@ zpool import -f -d /dev/mapper -R /mnt rpool  # mounts all under /mnt
 
 Insert the disk `UUID` and other unneeded informations into crypttab, so we can just cut out the `UUID` later:
 
-**⚠️ NOTE:** We need the `UUID` NOT the `PARTUUID`!
+> [!WARNING]
+> We need the `UUID` NOT the `PARTUUID`!
 
 *_-- SATA/SCSI/SAS drives_*
 ```bash
@@ -920,7 +924,8 @@ config:
 errors: No known data errors
 ```
 
-**🚨 NOTE:** If you haven't made a backup yet, this is your last chance to do so. Refer to the [backup instructions](#backup-data).
+> [!CAUTION]
+> If you haven't made a backup yet, this is your last chance to do so. Refer to the [backup instructions](#backup-data).
 
 #### Repeat the following step for every ZFS partition
 
@@ -946,9 +951,11 @@ zpool status
 
 Now that `sda3`/`nvme0n1p3` is offline from the pool, you can encrypt it using LUKS. Enter this command to encrypt with 512-bit.
 
-**⚠️ NOTE:** The key size you see (512-bit) is actually two 256-bit. AES-XTS requires two keys: one for encryption and one as a tweak key.
+> [!WARNING]
+> The key size you see (512-bit) is actually two 256-bit. AES-XTS requires two keys: one for encryption and one as a tweak key.
 
-**⚠️ NOTE:** Make sure you only delete the 3rd partition of your disk and not the whole disk. `sda3`/`nvme0n1p3`, `sdb3`/`nvme1n1p3`, `sdc3`/`nvme2n1p3`, etc.
+> [!WARNING]
+> Make sure you only delete the 3rd partition of your disk and not the whole disk. `sda3`/`nvme0n1p3`, `sdb3`/`nvme1n1p3`, `sdc3`/`nvme2n1p3`, etc.
 
 *_-- SATA/SCSI/SAS drives_*
 ```bash
@@ -1012,7 +1019,8 @@ zpool status
 
 Once the resilvering is complete, [repeat this step for every ZFS partition](#repeat-this-step-for-every-zfs-partition).
 
-**⚠️ NOTE:** Your system now will not boot anymore, you need to [fix the boot procedure](#fix-the-boot-procedure) now!
+> [!WARNING]
+> Your system now will not boot anymore, you need to [fix the boot procedure](#fix-the-boot-procedure) now!
 
 ## BTRFS (RAID1), BTRFS (RAID10) (🚨 HOW TO NOT YET COMPLETED, DO NOT ATTEMPT)
 
@@ -1036,7 +1044,8 @@ Not yet completed.
 
 This is the most basic step and the password will be requested at every boot.
 
-**⚠️ NOTE:** If you don't do this, your system will not boot again without a live USB/CD
+> [!WARNING]
+> If you don't do this, your system will not boot again without a live USB/CD
 
 Get the `UUID`'s of the encrypted partitions:
 
@@ -1052,7 +1061,8 @@ blkid | grep "/dev/[a-z0-9]*3" | grep -v "/dev/zd"
 
 Modify the crypttab file `/etc/crypttab` by adding these lines. Replace the partition `UUID` with the values fetched before.
 
-**⚠️ NOTE:** Pay attention to copy the `UUID` and NOT the `UUID_SUB` or `PARTUUID`! Each encrypted volume has its own `UUID`.
+> [!WARNING]
+> Pay attention to copy the `UUID` and NOT the `UUID_SUB` or `PARTUUID`! Each encrypted volume has its own `UUID`.
 
 *_-- SATA/SCSI/SAS HDD drives_*
 ```
@@ -1145,7 +1155,8 @@ IP=192.168.1.101::192.168.1.1:255.255.255.0:hostname
 
 Example to configure an IP address for the interface `enp3s0`:
 
-**⚠️ NOTE:** Make sure your interface name was not renamed when looking up the name. You can check the interface name with `ip link`.
+> [!WARNING]
+> Make sure your interface name was not renamed when looking up the name. You can check the interface name with `ip link`.
 
 ```
 IP=192.168.1.27::192.168.1.1:255.255.255.0:hostname:enp3s0
