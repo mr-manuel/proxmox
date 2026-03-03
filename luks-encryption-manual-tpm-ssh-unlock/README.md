@@ -1187,18 +1187,35 @@ Install the necessary TPM2 tools to interact with the TPM module and Clevis with
 
 ```bash
 apt install -y tpm2-tools clevis clevis-luks clevis-tpm2 clevis-initramfs
-
-# clear the TPM in case you made some tests before
-# tpm2_clear
 ```
 
-Bind the LUKS partition to TPM2 using Clevis.
+Clear the TPM in case you made some tests before. Should the command fail, then you need to reset your TPM via the BIOS/UEFI.
+
+```bash
+tpm2_clear
+```
+
+### Bind the LUKS partition to TPM2 using Clevis
+
+> [!NOTE]
+> Should the command fail with
+> ```
+> Failed to import token from file.
+> Error saving metadata to LUKS2 header in device {your-device}
+> Unable to update metadata; operation cancelled
+> Error adding new binding to {your-device}
+> ```
+> then very likely your LUKS keylots are full. Check [Error saving metadata to LUKS2 header in device](#error-saving-metadata-to-luks2-header-in-device) for a solution.
+
+Execute this command for every LUKS partition:
 
 *_-- SATA/SCSI/SAS drives_*
 ```bash
 clevis luks bind -d /dev/sda3 tpm2 '{"pcr_bank":"sha256", "pcr_ids":"1,7"}'
 
 clevis luks bind -d /dev/sdb3 tpm2 '{"pcr_bank":"sha256", "pcr_ids":"1,7"}'
+
+# and other LUKS partitions if you have some
 ```
 
 *_-- NVMe drives_*
@@ -1206,6 +1223,8 @@ clevis luks bind -d /dev/sdb3 tpm2 '{"pcr_bank":"sha256", "pcr_ids":"1,7"}'
 clevis luks bind -d /dev/nvme0n1p3 tpm2 '{"pcr_bank":"sha256", "pcr_ids":"1,7"}'
 
 clevis luks bind -d /dev/nvme1n1p3 tpm2 '{"pcr_bank":"sha256", "pcr_ids":"1,7"}'
+
+# and other LUKS partitions if you have some
 ```
 
 Test if the unlock works:
@@ -1214,12 +1233,16 @@ Test if the unlock works:
 ```bash
 clevis luks unlock -d /dev/sda3
 clevis luks unlock -d /dev/sdb3
+
+# and other LUKS partitions if you have some
 ```
 
 *_-- NVMe drives_*
 ```bash
 clevis luks unlock -d /dev/nvme0n1p3
 clevis luks unlock -d /dev/nvme1n1p3
+
+# and other LUKS partitions if you have some
 ```
 
 If it worked you will get
@@ -1247,6 +1270,362 @@ Update the Proxmox VE bootloader with this command:
 ```bash
 proxmox-boot-tool refresh
 ```
+
+### Error saving metadata to LUKS2 header in device
+
+```
+Failed to import token from file.
+Error saving metadata to LUKS2 header in device {your-device}
+Unable to update metadata; operation cancelled
+Error adding new binding to {your-device}
+```
+
+If you have this error, then it's very likely that your LUKS keyslots are full. This can happen, if you re-bind a LUKS keyslot with TPM after each kernel update.
+
+To solve this, check first if all your 8 keyslots are used:
+
+*_-- SATA/SCSI/SAS drives_*
+```bash
+cryptsetup luksDump /dev/sda3
+cryptsetup luksDump /dev/sdb3
+
+# and other LUKS partitions if you have some
+```
+
+*_-- NVMe drives_*
+```bash
+cryptsetup luksDump /dev/nvme0n1p3
+cryptsetup luksDump /dev/nvme1n1p3
+
+# and other LUKS partitions if you have some
+```
+
+The output looks like this:
+
+```
+LUKS header information
+Version:        2
+Epoch:          476695
+Metadata area:  16384 [bytes]
+Keyslots area:  8355840 [bytes]
+UUID:           e02ed3f3-5407-4129-1102-ae4d41f02ee2
+Label:          (no label)
+Subsystem:      (no subsystem)
+Flags:          (no flags)
+
+Data segments:
+  0: crypt
+        offset: 8388608 [bytes]
+        length: (whole device)
+        cipher: aes-xts-plain64
+        sector: 512 [bytes]
+
+Keyslots:
+  0: luks2
+        Key:        512 bits
+        Priority:   normal
+        Cipher:     aes-xts-plain64
+        Cipher key: 512 bits
+        PBKDF:      argon2id
+        Time cost:  11
+        Memory:     1048576
+        Threads:    4
+        Salt:       ff 9b 92 e6 ac c5 2b 28 99 5a 3e e3 80 e1 45 59
+                    21 42 d5 bc be 49 b6 84 d5 b8 a7 57 33 e4 28 47
+        AF stripes: 4000
+        AF hash:    sha512
+        Area offset:32768 [bytes]
+        Area length:258048 [bytes]
+        Digest ID:  0
+  1: luks2
+        Key:        512 bits
+        Priority:   normal
+        Cipher:     aes-xts-plain64
+        Cipher key: 512 bits
+        PBKDF:      pbkdf2
+        Hash:       sha256
+        Iterations: 1000
+        Salt:       7e 8e 91 37 7a 3f fe 3f f9 7a 86 30 31 77 0f ab
+                    43 72 6c 09 f1 ab 96 96 25 33 c6 3b f6 a7 c2 16
+        AF stripes: 4000
+        AF hash:    sha256
+        Area offset:290816 [bytes]
+        Area length:258048 [bytes]
+        Digest ID:  0
+  2: luks2
+        Key:        512 bits
+        Priority:   normal
+        Cipher:     aes-xts-plain64
+        Cipher key: 512 bits
+        PBKDF:      pbkdf2
+        Hash:       sha256
+        Iterations: 1000
+        Salt:       c2 3a 71 ab fa 17 fd c5 b4 6d 50 bf cd 8e 08 78
+                    26 60 5d 27 21 83 30 c2 89 dd d0 ed 1d 59 56 8c
+        AF stripes: 4000
+        AF hash:    sha256
+        Area offset:548864 [bytes]
+        Area length:258048 [bytes]
+        Digest ID:  0
+  3: luks2
+        Key:        512 bits
+        Priority:   normal
+        Cipher:     aes-xts-plain64
+        Cipher key: 512 bits
+        PBKDF:      pbkdf2
+        Hash:       sha256
+        Iterations: 1000
+        Salt:       52 61 ba 32 2e 68 39 82 3c 5d 70 2f a1 8e eb 61
+                    72 cd 25 87 98 2a 91 f4 e4 e1 df 2d c3 49 d5 89
+        AF stripes: 4000
+        AF hash:    sha256
+        Area offset:806912 [bytes]
+        Area length:258048 [bytes]
+        Digest ID:  0
+  4: luks2
+        Key:        512 bits
+        Priority:   normal
+        Cipher:     aes-xts-plain64
+        Cipher key: 512 bits
+        PBKDF:      pbkdf2
+        Hash:       sha256
+        Iterations: 1000
+        Salt:       f4 36 a9 fc 59 92 2f 5f 11 e1 68 57 bd f8 58 37
+                    95 c4 3b 5b 1f 25 5e 67 ff ee 11 bd 0e ac dc f1
+        AF stripes: 4000
+        AF hash:    sha256
+        Area offset:1064960 [bytes]
+        Area length:258048 [bytes]
+        Digest ID:  0
+  5: luks2
+        Key:        512 bits
+        Priority:   normal
+        Cipher:     aes-xts-plain64
+        Cipher key: 512 bits
+        PBKDF:      pbkdf2
+        Hash:       sha256
+        Iterations: 1000
+        Salt:       f6 1e ad 9e 8f 44 88 36 66 d0 2d 6b 16 d5 d3 06
+                    ef ff ce 26 d0 fd 07 3c 6a 66 67 74 40 84 82 12
+        AF stripes: 4000
+        AF hash:    sha256
+        Area offset:1323008 [bytes]
+        Area length:258048 [bytes]
+        Digest ID:  0
+  6: luks2
+        Key:        512 bits
+        Priority:   normal
+        Cipher:     aes-xts-plain64
+        Cipher key: 512 bits
+        PBKDF:      pbkdf2
+        Hash:       sha256
+        Iterations: 1000
+        Salt:       bb 4a fb e9 21 c3 e8 e5 51 8d a2 f8 a1 d1 f0 ee
+                    22 6c 0c d7 d3 70 a3 0b c3 2f a6 9c e7 8e 46 5c
+        AF stripes: 4000
+        AF hash:    sha256
+        Area offset:1581056 [bytes]
+        Area length:258048 [bytes]
+        Digest ID:  0
+  7: luks2
+        Key:        512 bits
+        Priority:   normal
+        Cipher:     aes-xts-plain64
+        Cipher key: 512 bits
+        PBKDF:      pbkdf2
+        Hash:       sha256
+        Iterations: 1000
+        Salt:       75 2b f6 a5 22 a8 67 ec c5 2c 88 30 1c 42 10 fa
+                    69 8a d0 ac 33 40 e4 88 36 45 ea 5e ac 3e d3 39
+        AF stripes: 4000
+        AF hash:    sha256
+        Area offset:1839104 [bytes]
+        Area length:258048 [bytes]
+        Digest ID:  0
+  8: luks2
+        Key:        512 bits
+        Priority:   normal
+        Cipher:     aes-xts-plain64
+        Cipher key: 512 bits
+        PBKDF:      pbkdf2
+        Hash:       sha256
+        Iterations: 1000
+        Salt:       7a 7e 3a 60 47 07 26 e7 09 e0 34 96 f8 8b 14 6b
+                    42 70 b6 3a 16 d3 8c 78 ce cc fd 5a e0 a4 75 27
+        AF stripes: 4000
+        AF hash:    sha256
+        Area offset:2097152 [bytes]
+        Area length:258048 [bytes]
+        Digest ID:  0
+Tokens:
+  0: clevis
+        Keyslot:    1
+  1: clevis
+        Keyslot:    2
+  2: clevis
+        Keyslot:    3
+  3: clevis
+        Keyslot:    4
+  4: clevis
+        Keyslot:    5
+  5: clevis
+        Keyslot:    6
+  6: clevis
+        Keyslot:    7
+  7: clevis
+        Keyslot:    8
+Digests:
+  0: pbkdf2
+        Hash:       sha512
+        Iterations: 262144
+        Salt:       bf 56 28 6f 7b ae 68 91 6b b6 27 cb 85 33 50 1a
+                    b2 fe 87 ab fb 73 ab ec cf 99 02 a4 bf 0d 7c 2a
+        Digest:     af 3d 14 16 e3 a3 30 34 92 ce 53 ef 97 52 f9 f2
+                    2a 95 2c d0 e3 20 6a 02 9b e8 99 c9 27 dc 98 80
+                    01 8c d7 c2 fd ee 87 37 7c 3b 96 cf 2b 39 22 e8
+                    18 c3 e6 a3 7f c1 39 fc d2 c5 9c 6e 0d c5 87 d4
+```
+
+Keyslot `0` with `PBKDF: argon2id` is most likely the keyslot that is used to unlock LUKS with your master password.
+All other entries are from the TPM binding with clevis, if you followed only this how to.
+
+To make sure password unlock is bind to keyslot `0` try to unlock LUKS with the master password.
+If there is no output after entering the password, then it works.
+
+*_-- SATA/SCSI/SAS drives_*
+```bash
+cryptsetup luksOpen --test-passphrase --key-slot 0 /dev/sda3
+cryptsetup luksOpen --test-passphrase --key-slot 0 /dev/sdb3
+
+# and other LUKS partitions if you have some
+```
+
+*_-- NVMe drives_*
+```bash
+cryptsetup luksOpen --test-passphrase --key-slot 0 /dev/nvme0n1p3
+cryptsetup luksOpen --test-passphrase --key-slot 0 /dev/nvme1n1p3
+
+# and other LUKS partitions if you have some
+```
+
+Now remove unused LUKS keyslots so we can bind new ones after:
+
+
+*_-- SATA/SCSI/SAS drives_*
+```bash
+clevis luks unbind -d /dev/sda3 -s 1
+clevis luks unbind -d /dev/sda3 -s 2
+clevis luks unbind -d /dev/sda3 -s 3
+clevis luks unbind -d /dev/sda3 -s 4
+clevis luks unbind -d /dev/sda3 -s 5
+clevis luks unbind -d /dev/sda3 -s 6
+clevis luks unbind -d /dev/sda3 -s 7
+clevis luks unbind -d /dev/sda3 -s 8
+
+clevis luks unbind -d /dev/sdb3 -s 1
+clevis luks unbind -d /dev/sdb3 -s 2
+clevis luks unbind -d /dev/sdb3 -s 3
+clevis luks unbind -d /dev/sdb3 -s 4
+clevis luks unbind -d /dev/sdb3 -s 5
+clevis luks unbind -d /dev/sdb3 -s 6
+clevis luks unbind -d /dev/sdb3 -s 7
+clevis luks unbind -d /dev/sdb3 -s 8
+
+# and other LUKS partitions if you have some
+```
+
+*_-- NVMe drives_*
+```bash
+clevis luks unbind -d /dev/nvme0n1p3 -s 1
+clevis luks unbind -d /dev/nvme0n1p3 -s 2
+clevis luks unbind -d /dev/nvme0n1p3 -s 3
+clevis luks unbind -d /dev/nvme0n1p3 -s 4
+clevis luks unbind -d /dev/nvme0n1p3 -s 5
+clevis luks unbind -d /dev/nvme0n1p3 -s 6
+clevis luks unbind -d /dev/nvme0n1p3 -s 7
+clevis luks unbind -d /dev/nvme0n1p3 -s 8
+
+clevis luks unbind -d /dev/nvme1n1p3 -s 1
+clevis luks unbind -d /dev/nvme1n1p3 -s 2
+clevis luks unbind -d /dev/nvme1n1p3 -s 3
+clevis luks unbind -d /dev/nvme1n1p3 -s 4
+clevis luks unbind -d /dev/nvme1n1p3 -s 5
+clevis luks unbind -d /dev/nvme1n1p3 -s 6
+clevis luks unbind -d /dev/nvme1n1p3 -s 7
+clevis luks unbind -d /dev/nvme1n1p3 -s 8
+
+# and other LUKS partitions if you have some
+```
+
+Check again which keyslots are used:
+
+*_-- SATA/SCSI/SAS drives_*
+```bash
+cryptsetup luksDump /dev/sda3
+cryptsetup luksDump /dev/sdb3
+
+# and other LUKS partitions if you have some
+```
+
+*_-- NVMe drives_*
+```bash
+cryptsetup luksDump /dev/nvme0n1p3
+cryptsetup luksDump /dev/nvme1n1p3
+
+# and other LUKS partitions if you have some
+```
+
+The output should now look like this:
+
+```
+LUKS header information
+Version:        2
+Epoch:          476695
+Metadata area:  16384 [bytes]
+Keyslots area:  8355840 [bytes]
+UUID:           e02ed3f3-5407-4129-1102-ae4d41f02ee2
+Label:          (no label)
+Subsystem:      (no subsystem)
+Flags:          (no flags)
+
+Data segments:
+  0: crypt
+        offset: 8388608 [bytes]
+        length: (whole device)
+        cipher: aes-xts-plain64
+        sector: 512 [bytes]
+
+Keyslots:
+  0: luks2
+        Key:        512 bits
+        Priority:   normal
+        Cipher:     aes-xts-plain64
+        Cipher key: 512 bits
+        PBKDF:      argon2id
+        Time cost:  11
+        Memory:     1048576
+        Threads:    4
+        Salt:       ff 9b 92 e6 ac c5 2b 28 99 5a 3e e3 80 e1 45 59
+                    21 42 d5 bc be 49 b6 84 d5 b8 a7 57 33 e4 28 47
+        AF stripes: 4000
+        AF hash:    sha512
+        Area offset:32768 [bytes]
+        Area length:258048 [bytes]
+        Digest ID:  0
+Tokens:
+Digests:
+  0: pbkdf2
+        Hash:       sha512
+        Iterations: 262144
+        Salt:       bf 56 28 6f 7b ae 68 91 6b b6 27 cb 85 33 50 1a
+                    b2 fe 87 ab fb 73 ab ec cf 99 02 a4 bf 0d 7c 2a
+        Digest:     af 3d 14 16 e3 a3 30 34 92 ce 53 ef 97 52 f9 f2
+                    2a 95 2c d0 e3 20 6a 02 9b e8 99 c9 27 dc 98 80
+                    01 8c d7 c2 fd ee 87 37 7c 3b 96 cf 2b 39 22 e8
+                    18 c3 e6 a3 7f c1 39 fc d2 c5 9c 6e 0d c5 87 d4
+```
+
+Now try again to [bind the LUKS partition to TPM2 using Clevis](#bind-the-luks-partition-to-tpm2-using-clevis).
 
 ### Sources
 
