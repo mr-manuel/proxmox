@@ -571,7 +571,7 @@ cryptsetup benchmark
 To test the disk benchmark run:
 
 ```
-dd if=/dev/zero of=/tmp/write_test.img bs=1G count=1 oflag=dsync; rm /tmp/write_test.img
+dd if=/dev/zero of=write_test.img bs=1G count=1 oflag=dsync; rm write_test.img
 ```
 
 # Enable LUKS for root partition
